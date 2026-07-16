@@ -540,6 +540,44 @@ window.addEventListener('load', function(){
     </div>
   </div>
 
+  <!-- RESUMO POR GRUPO -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;" id="resumo-grupos">
+    <!-- ENGORDA -->
+    <div style="background:var(--card);border-radius:14px;padding:16px;border:1.5px solid #C08332;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+      <div style="font-weight:700;font-size:14px;color:#8C4D2E;margin-bottom:12px;">🐂 Engorda <span style="font-size:11px;color:#aaa;font-weight:400;">(Conf. 1, 2 e Remanga)</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
+        <div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:var(--text);" id="eg-total">—</div><div style="font-size:10px;color:#888;">Total</div></div>
+        <div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:#F44336;" id="eg-ocupadas">—</div><div style="font-size:10px;color:#888;">Ocupadas</div></div>
+        <div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:#4CAF50;" id="eg-livres">—</div><div style="font-size:10px;color:#888;">Livres</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px;">
+        <div style="text-align:center;"><div style="font-size:16px;font-weight:700;color:#2196F3;" id="eg-limpeza">—</div><div style="font-size:10px;color:#888;">Em limpeza</div></div>
+        <div style="text-align:center;"><div style="font-size:16px;font-weight:700;color:#FF9800;" id="eg-embarcadas">—</div><div style="font-size:10px;color:#888;">Embarcadas</div></div>
+      </div>
+      <div style="background:#f5f0e8;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:#686230;font-weight:600;">Taxa de ocupação</span>
+        <span style="font-size:18px;font-weight:700;color:#C08332;" id="eg-taxa">—%</span>
+      </div>
+    </div>
+    <!-- RECRIA CONFINADA -->
+    <div style="background:var(--card);border-radius:14px;padding:16px;border:1.5px solid #686230;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+      <div style="font-weight:700;font-size:14px;color:#686230;margin-bottom:12px;">🌱 Recria Confinada <span style="font-size:11px;color:#aaa;font-weight:400;">(Conf. 3 e Sequestro)</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
+        <div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:var(--text);" id="rc-total">—</div><div style="font-size:10px;color:#888;">Total</div></div>
+        <div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:#F44336;" id="rc-ocupadas">—</div><div style="font-size:10px;color:#888;">Ocupadas</div></div>
+        <div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:#4CAF50;" id="rc-livres">—</div><div style="font-size:10px;color:#888;">Livres</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px;">
+        <div style="text-align:center;"><div style="font-size:16px;font-weight:700;color:#2196F3;" id="rc-limpeza">—</div><div style="font-size:10px;color:#888;">Em limpeza</div></div>
+        <div style="text-align:center;"><div style="font-size:16px;font-weight:700;color:#FF9800;" id="rc-embarcadas">—</div><div style="font-size:10px;color:#888;">Embarcadas</div></div>
+      </div>
+      <div style="background:#f5f0e8;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:#686230;font-weight:600;">Taxa de ocupação</span>
+        <span style="font-size:18px;font-weight:700;color:#686230;" id="rc-taxa">—%</span>
+      </div>
+    </div>
+  </div>
+
   <!-- ALERTAS RESUMO NO DASH -->
   <div class="section-title">🚨 Alertas</div>
   <div id="secao-alertas-resumo" style="margin-bottom:8px;display:flex;gap:10px;flex-wrap:wrap;">
@@ -779,6 +817,10 @@ window.addEventListener('load', function(){
     <div class="popup-resp">
       <label>Seu nome:</label>
       <input id="pop-usuario" type="text" placeholder="Ex: Sheila, Hudson...">
+    </div>
+    <div class="popup-resp" style="margin-top:6px;">
+      <label style="font-size:12px;color:#888;">Data da ação: <span style="font-size:11px;font-style:italic;">(hoje por padrão)</span></label>
+      <input id="pop-data-acao" type="date" style="padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;background:var(--card);color:var(--text);width:100%;box-sizing:border-box;">
     </div>
     <div class="popup-actions" id="pop-acoes"></div>
     <div class="msg" id="pop-msg"></div>
@@ -1449,6 +1491,26 @@ function atualizarCards() {
   document.getElementById('c-liberadas').textContent = contar('liberada');
   document.getElementById('c-limpeza').textContent   = emLimp;
   document.getElementById('c-embarcadas').textContent= contar('embarcada');
+
+  // Grupos: Engorda = Conf 1, 2, Remanga | Recria = Conf 3, Sequestro
+  var ENGORDA  = ['Confinamento 1','Confinamento 2','Remanga'];
+  var RECRIA   = ['Confinamento 3','Sequestro'];
+  var engorda  = todos.filter(b => ENGORDA.includes(b.confinamento));
+  var recria   = todos.filter(b => RECRIA.includes(b.confinamento));
+
+  function calcGrupo(grupo, prefixo) {
+    var total     = grupo.length;
+    var ocupadas  = grupo.filter(b => b.status === 'ocupada').length;
+    var livres    = grupo.filter(b => b.status === 'liberada').length;
+    var limpeza   = grupo.filter(b => ['limpeza','transporte','cascalho','reparacao'].includes(b.status)).length;
+    var embarcadas= grupo.filter(b => b.status === 'embarcada').length;
+    var taxa      = total > 0 ? Math.round((ocupadas + embarcadas) / total * 100) : 0;
+    var s = function(id, v) { var el = document.getElementById(prefixo + id); if (el) el.textContent = v; };
+    s('total', total); s('ocupadas', ocupadas); s('livres', livres);
+    s('limpeza', limpeza); s('embarcadas', embarcadas); s('taxa', taxa + '%');
+  }
+  calcGrupo(engorda, 'eg-');
+  calcGrupo(recria,  'rc-');
 }
 
 // ── ALERTAS ──
@@ -2528,6 +2590,16 @@ function abrirPopup(id) {
     campUsuario.style.cursor = 'default';
   }
 
+  // Preencher data da ação com hoje automaticamente
+  var campDataAcao = document.getElementById('pop-data-acao');
+  if (campDataAcao) {
+    var hoje = new Date();
+    var anoH = hoje.getFullYear();
+    var mesH = String(hoje.getMonth()+1).padStart(2,'0');
+    var diaH = String(hoje.getDate()).padStart(2,'0');
+    campDataAcao.value = anoH + '-' + mesH + '-' + diaH;
+  }
+
   // Histórico do ciclo atual
   var histDiv = document.getElementById('pop-historico');
   if (!Array.isArray(CICLOS_DATA)) CICLOS_DATA = [];
@@ -2662,9 +2734,12 @@ function desfazerUltimaAcaoGlobal() {
   .then(function(data) {
     if (data.status === 'ok') {
       var stAnterior = data.dados.status_anterior;
-      if (!BD[idBaia]) BD[idBaia] = { id: idBaia, nome: idBaia, status: stAnterior, responsavel: responsavel, data: '' };
+      var dataOriginal = data.dados.data_original || '';
+      var respOriginal = data.dados.responsavel_original || responsavel;
+      if (!BD[idBaia]) BD[idBaia] = { id: idBaia, nome: idBaia, status: stAnterior, responsavel: respOriginal, data: dataOriginal };
       BD[idBaia].status = stAnterior;
-      BD[idBaia].responsavel = responsavel;
+      BD[idBaia].responsavel = respOriginal;
+      if (dataOriginal) BD[idBaia].data = dataOriginal;
       renderMapa(); renderLegenda(); atualizarCards();
       desativarBtnDesfazer();
       mostrarToast('\u21a9 Desfeito! Baia ' + idBaia + ' voltou para ' + (LABELS[stAnterior] || stAnterior), 'ok');
@@ -2830,49 +2905,81 @@ async function gerarPDFCompleto() {
   var { jsPDF } = window.jspdf;
   var pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   var W = 210, H = 297;
+  var hoje = new Date().toLocaleString('pt-BR');
 
-  // Capturar página inteira
-  var body = document.querySelector('.main');
-  var canvas = await html2canvas(body, { scale: 1.5, backgroundColor: '#f0f2f5', useCORS: true });
-  var imgData = canvas.toDataURL('image/png');
+  function addHeader(pdf, titulo) {
+    pdf.setFillColor(60, 30, 15);
+    pdf.rect(0, 0, W, 16, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(11); pdf.setFont('helvetica', 'bold');
+    pdf.text('CURRAL FLUX', 10, 11);
+    pdf.setFontSize(8); pdf.setFont('helvetica', 'normal');
+    pdf.text('Grupo Agroparanã — ' + titulo, W - 10, 11, { align: 'right' });
+  }
 
-  // Header
-  pdf.setFillColor(0, 0, 0);
-  pdf.rect(0, 0, W, 16, 'F');
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(13);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('CURRAL FLUX', 10, 11);
-  pdf.setFontSize(8);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text('Grupo Agroparanã — Relatório Completo', W - 10, 11, { align: 'right' });
+  async function capturarElemento(el, escala) {
+    return await html2canvas(el, { scale: escala || 1.5, backgroundColor: '#f5f0e8', useCORS: true });
+  }
 
-  // Imagem do conteúdo
-  var totalH = (canvas.height / canvas.width) * (W - 20);
-  var pageH = H - 24;
-  var yOffset = 0;
-  var page = 0;
-
-  while (yOffset < totalH) {
-    if (page > 0) pdf.addPage();
-    var srcY = (yOffset / totalH) * canvas.height;
-    var srcH = Math.min((pageH / totalH) * canvas.height, canvas.height - srcY);
-    var sliceH = (srcH / canvas.height) * totalH;
-
-    // Criar canvas fatiado
-    var sliceCanvas = document.createElement('canvas');
-    sliceCanvas.width = canvas.width;
-    sliceCanvas.height = srcH;
-    sliceCanvas.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
-    pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', 10, page === 0 ? 20 : 10, W - 20, sliceH);
-
-    yOffset += pageH;
-    page++;
-    if (page > 0) {
-      pdf.setFontSize(7);
-      pdf.setTextColor(150,150,150);
-      pdf.text('Gerado em: ' + new Date().toLocaleString('pt-BR'), W - 10, H - 5, { align: 'right' });
+  function adicionarCanvas(pdf, canvas, startY, tituloSecao) {
+    var W = 210, H = 297;
+    var largura = W - 20;
+    var totalH = (canvas.height / canvas.width) * largura;
+    var pageH = H - startY - 15;
+    var yOffset = 0; var page = 0;
+    while (yOffset < totalH) {
+      if (page > 0) { pdf.addPage(); addHeader(pdf, tituloSecao); startY = 20; pageH = H - 35; }
+      var srcY = (yOffset / totalH) * canvas.height;
+      var srcH = Math.min((pageH / totalH) * canvas.height, canvas.height - srcY);
+      var sliceH = (srcH / canvas.height) * totalH;
+      var sc = document.createElement('canvas');
+      sc.width = canvas.width; sc.height = Math.ceil(srcH);
+      sc.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+      pdf.addImage(sc.toDataURL('image/png'), 'PNG', 10, page === 0 ? startY : 20, largura, sliceH);
+      pdf.setFontSize(7); pdf.setTextColor(150,150,150);
+      pdf.text('Gerado em: ' + hoje, W - 10, H - 5, { align: 'right' });
+      yOffset += pageH; page++;
     }
+  }
+
+  // ── PARTE 1: Dashboard + Resumo Geral ──
+  addHeader(pdf, 'Relatório Completo');
+  var secDash = document.getElementById('secao-dashboard');
+  if (secDash) {
+    var c1 = await capturarElemento(secDash);
+    await adicionarCanvas(pdf, c1, 20, 'Resumo Geral');
+  }
+
+  // ── PARTE 2: Ranking de Currais ──
+  pdf.addPage(); addHeader(pdf, 'Ranking de Currais');
+  var secRanking = document.getElementById('secao-ranking');
+  if (!secRanking) {
+    // Tentar capturar a tabela de ranking diretamente
+    var tblRanking = document.getElementById('ranking-tabela') || document.querySelector('.ranking-table') || document.querySelector('[id*="ranking"]');
+    secRanking = tblRanking;
+  }
+  if (secRanking) {
+    var c2 = await capturarElemento(secRanking);
+    await adicionarCanvas(pdf, c2, 20, 'Ranking de Currais');
+  } else {
+    // Gerar ranking em texto
+    var todos = Object.values(BD).filter(b => b.status === 'ocupada');
+    var y = 25;
+    pdf.setFontSize(11); pdf.setTextColor(60,30,15); pdf.setFont('helvetica','bold');
+    pdf.text('Ranking de Currais — Baias Ocupadas', 10, y); y += 10;
+    pdf.setFontSize(9); pdf.setFont('helvetica','normal'); pdf.setTextColor(50,50,50);
+    todos.slice(0,40).forEach(function(b, i) {
+      pdf.text((i+1) + '. ' + b.nome + ' — ' + b.confinamento, 10, y); y += 7;
+      if (y > H - 20) { pdf.addPage(); addHeader(pdf, 'Ranking'); y = 25; }
+    });
+  }
+
+  // ── PARTE 3: Mapa de Ocupação por Confinamento ──
+  pdf.addPage(); addHeader(pdf, 'Mapa de Ocupação');
+  var secMapa = document.getElementById('mapa');
+  if (secMapa) {
+    var c3 = await capturarElemento(secMapa, 1.2);
+    await adicionarCanvas(pdf, c3, 20, 'Mapa de Ocupação');
   }
 
   pdf.save('CurralFlux_Completo_' + new Date().toISOString().slice(0,10) + '.pdf');
@@ -4179,7 +4286,9 @@ executarAcao = function(acao, btn) {
   btn.disabled = true;
   document.getElementById('pop-msg').className = 'msg';
 
-  var dadosAcao = { acao, id_baia: baiaAtual, responsavel: usuario, observacoes: 'via painel' };
+  var dataAcaoEl = document.getElementById('pop-data-acao');
+  var dataAcaoVal = dataAcaoEl ? dataAcaoEl.value : '';
+  var dadosAcao = { acao, id_baia: baiaAtual, responsavel: usuario, observacoes: 'via painel', data_acao: dataAcaoVal };
   // Enviar configurações de projeção junto com entrada_animal
   if (acao === 'entrada_animal') {
     var ppEl = document.getElementById('proj-dias-permanencia');
@@ -4198,6 +4307,8 @@ executarAcao = function(acao, btn) {
       } else if (data.status === 'ok' && !data.dados.ignorado) {
         var novoSt = data.dados.status_novo;
         var idBaiaSalvaP = baiaAtual;
+        var dataAcaoEl = document.getElementById('pop-data-acao');
+        var dataAcaoVal = dataAcaoEl ? dataAcaoEl.value : '';
         if (BD[baiaAtual]) { BD[baiaAtual].status = novoSt; BD[baiaAtual].responsavel = usuario; }
         var el = document.getElementById('b_' + baiaAtual);
         if (el) { el.style.background = COR[novoSt] || '#ccc'; el.title = baiaAtual + ': ' + (LABELS[novoSt] || novoSt); }
