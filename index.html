@@ -297,12 +297,31 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color:
 
 <!-- FUNÇÕES GLOBAIS -->
 <script>
+// Usuários carregados dinamicamente da planilha
 var USUARIOS = [
-  {email:'agroneloreparana@gmail.com', senha:'agropara2026', nome:'Admin'},
-  {email:'juliana@agroparana.com', senha:'agropara2026', nome:'Juliana'},
-  {email:'hugo.savioli', senha:'123456', nome:'Hugo Savioli'},
-  {email:'juliana.horta', senha:'123456', nome:'Juliana Horta'},
+  {email:'agroneloreparana@gmail.com', senha:'agropara2026', nome:'Admin', ativo:true},
+  {email:'juliana@agroparana.com', senha:'agropara2026', nome:'Juliana', ativo:true},
+  {email:'hugo.savioli', senha:'123456', nome:'Hugo Savioli', ativo:true},
+  {email:'juliana.horta', senha:'123456', nome:'Juliana Horta', ativo:true},
 ];
+
+function carregarUsuarios() {
+  var ts = Date.now();
+  var cb = '_cf_usuarios_' + ts;
+  window[cb] = function(data) {
+    try { delete window[cb]; } catch(e) {}
+    var s = document.getElementById('_s_usuarios_' + ts);
+    if (s) s.remove();
+    if (data && data.status === 'ok' && Array.isArray(data.dados)) {
+      USUARIOS = data.dados;
+    }
+  };
+  var s = document.createElement('script');
+  s.id = '_s_usuarios_' + ts;
+  s.src = SCRIPT_URL + '?acao=usuarios&callback=' + cb + '&_=' + ts;
+  s.onerror = function() { try { delete window[cb]; } catch(e) {} if (s) s.remove(); };
+  document.head.appendChild(s);
+}
 
 function mostrarTela(tela) {
   document.getElementById('tela-landing').style.display = tela==='landing' ? 'block' : 'none';
@@ -324,7 +343,7 @@ function fecharLogin() {
 function fazerLogin() {
   var email  = document.getElementById('login-email').value.trim().toLowerCase();
   var senha  = document.getElementById('login-senha').value;
-  var usuario = USUARIOS.find(function(u){ return u.email.toLowerCase()===email && u.senha===senha; });
+  var usuario = USUARIOS.find(function(u){ return u.email.toLowerCase()===email && u.senha===senha && u.ativo !== false; });
   if (usuario) {
     sessionStorage.setItem('curralflux_user', JSON.stringify({email:usuario.email, nome:usuario.nome}));
     fecharLogin();
@@ -351,6 +370,7 @@ function iniciarPainel() {
 }
 
 window.addEventListener('load', function(){
+  carregarUsuarios();
   var user = sessionStorage.getItem('curralflux_user');
   if (user) { mostrarTela('painel'); iniciarPainel(); }
 });
