@@ -3062,49 +3062,47 @@ async function gerarPDFCompleto() {
   var LBL_PDF2 = LBL_PDF;
 
   // Layout:
-  // [  Conf1 (12x8)  ] [ Conf2 (6x10) ] [ Sequestro (14x2)       ]
-  //                                      [ Conf3 (11x2) | Rem(4x1) ]
+  // [  Conf1 (12x8)  ] [ Conf2 (6x10) ]
+  // [ Seq(14x2) | Conf3(11x2) | Rem(4x1) ] -- parte inferior
   var margL=5, margT=16, margB=14, gap=1.2;
   var areaW=WL-margL*2;
   var areaH=HL-margT-margB;
-
-  // Tamanho de célula padrão — calculado para o maior confinamento (Conf1: 12 colunas, 8 linhas)
-  // Área esquerda = 65% para Conf1+Conf2, direita = 35% para Seq+Conf3+Rem
   var lblW=7;
-  var areaEsq = areaW * 0.645;
-  var areaDir = areaW * 0.335;
 
-  // Conf1 tem 12 colunas, Conf2 tem 6 — proporção 2:1
-  var sec1W = areaEsq * 0.64;
-  var sec2W = areaEsq * 0.34;
+  // Dividir área: 70% cima (Conf1+Conf2), 30% baixo (Seq+Conf3+Rem)
+  var altaCima = areaH * 0.72;
+  var altaBaixo = areaH * 0.26;
 
-  // Célula padrão: definida pelo Conf1 (12 cols, 8 linhas)
+  // Conf1 e Conf2 ficam lado a lado na parte de cima
+  // Conf1: 12 cols x 8 linhas, Conf2: 6 cols x 10 linhas
+  // Proporção de largura: Conf1 = 12/(12+6) = 2/3, Conf2 = 1/3
+  var sec1W = areaW * 0.64;
+  var sec2W = areaW * 0.34;
+
+  // Célula padrão baseada no que cabe em Conf1 (12 cols x 8 linhas) na área de cima
   var CEL = Math.min(
-    (sec1W - lblW - (12+1)*gap) / 12,  // largura max pelo Conf1
-    (areaH - 7 - (8+1)*gap) / 8         // altura max pelo Conf1 (8 linhas)
+    (sec1W - lblW - (12+1)*gap) / 12,
+    (altaCima - 7 - (8+1)*gap) / 8
   );
-  CEL = Math.floor(CEL * 10) / 10; // arredondar para baixo
-  var FSZ = Math.max(4.5, Math.min(CEL * 0.62, 8));
+  CEL = Math.floor(CEL * 10) / 10;
+  var FSZ = Math.max(4.5, Math.min(CEL * 0.65, 9));
 
   function desenharConf(conf, sx, sy) {
-    // Titulo
     pdf.setFontSize(6.5); pdf.setFont('helvetica','bold'); pdf.setTextColor(40,40,40);
     pdf.text(conf.nome.toUpperCase(), sx, sy+4);
     var gy2 = sy + 7;
     conf.rows.forEach(function(r, ri) {
       var ns = []; for (var j=1; j<=r.n; j++) ns.push(j);
       var ry = gy2 + ri*(CEL+gap);
-      // Label linha
       pdf.setFontSize(FSZ); pdf.setFont('helvetica','bold'); pdf.setTextColor(80,80,80);
       pdf.text(r.l, sx+lblW, ry+CEL*0.72, {align:'right'});
-      // Células
       ns.forEach(function(n, ni) {
         var id = gId(conf, r, n);
         var st = (BD[id]&&BD[id].status)||'liberada';
         var rgb = hexToRgb(COR_PDF2[st]||'#cccccc');
         var cx = sx + lblW + gap + ni*(CEL+gap);
         pdf.setFillColor(rgb[0],rgb[1],rgb[2]);
-        pdf.roundedRect(cx, ry, CEL, CEL, 0.8, 0.8, 'F'); // célula QUADRADA
+        pdf.roundedRect(cx, ry, CEL, CEL, 0.8, 0.8, 'F');
         pdf.setTextColor(255,255,255);
         pdf.setFontSize(FSZ); pdf.setFont('helvetica','bold');
         pdf.text(String(n), cx+CEL/2, ry+CEL*0.72, {align:'center'});
@@ -3114,20 +3112,24 @@ async function gerarPDFCompleto() {
 
   var conf1=CONFS[0], conf2=CONFS[1], conf3=CONFS[2], confSeq=CONFS[3], confRem=CONFS[4];
 
-  // Esquerda: Conf1 e Conf2 lado a lado
+  // Parte de CIMA: Conf1 e Conf2 lado a lado
   desenharConf(conf1, margL, margT);
   desenharConf(conf2, margL + sec1W + 4, margT);
 
-  // Direita: Sequestro em cima, Conf3 + Remanga embaixo lado a lado
-  var sx3 = margL + areaEsq + 6;
-  var altSeq = 7 + 2*(CEL+gap) + 4; // 2 linhas SEQ
-  var altConf3 = 7 + 2*(CEL+gap);   // 2 linhas Conf3
+  // Linha divisória
+  var yBaixo = margT + altaCima + 2;
+  pdf.setDrawColor(200,200,200); pdf.line(margL, yBaixo, WL-margL, yBaixo);
+  yBaixo += 3;
 
-  desenharConf(confSeq, sx3, margT);
-  desenharConf(conf3, sx3, margT + altSeq + 3);
-  // Remanga do lado do Conf3
-  var sx3Rem = sx3 + lblW + gap + 11*(CEL+gap) + 4;
-  desenharConf(confRem, sx3Rem, margT + altSeq + 3);
+  // Parte de BAIXO: Sequestro | Conf3 | Remanga lado a lado
+  // Sequestro: 14 cols, Conf3: 11 cols, Rem: 4 cols — total 29 cols
+  // Largura proporcional
+  var wSeq  = areaW * (14/31);
+  var wConf3= areaW * (11/31);
+  var wRem  = areaW * (4/31);
+  desenharConf(confSeq,  margL, yBaixo);
+  desenharConf(conf3, margL + wSeq + 3, yBaixo);
+  desenharConf(confRem, margL + wSeq + wConf3 + 6, yBaixo);
 
   // Legenda no rodape
   var legY=HL-10;
