@@ -5,7 +5,6 @@ const ASSETS = [
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
 ];
 
-// Instala e faz cache apenas de libs externas (não o index.html)
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
@@ -14,7 +13,6 @@ self.addEventListener('install', e => {
   );
 });
 
-// Ativa e limpa caches antigos
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -23,11 +21,9 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Intercepta requisições
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Apps Script — sempre online, nunca cacheia
   if (url.hostname.includes('script.google.com')) {
     e.respondWith(
       fetch(e.request).catch(() =>
@@ -39,7 +35,6 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // index.html e páginas — Network First (sempre tenta pegar versão nova)
   if (url.pathname === '/' || url.pathname.endsWith('.html')) {
     e.respondWith(
       fetch(e.request)
@@ -53,7 +48,6 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Libs externas (chart.js, jspdf etc.) — Cache First
   e.respondWith(
     caches.match(e.request).then(cached =>
       cached || fetch(e.request).then(res => {
@@ -65,7 +59,6 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// Background Sync — processa fila quando internet volta
 self.addEventListener('sync', e => {
   if (e.tag === 'curralflux-sync') {
     e.waitUntil(processarFila());
@@ -75,7 +68,6 @@ self.addEventListener('sync', e => {
 async function processarFila() {
   const db = await abrirDB();
   const fila = await lerFila(db);
-
   let enviados = 0;
   for (const item of fila) {
     try {
@@ -84,24 +76,15 @@ async function processarFila() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item.dados)
       });
-      if (res.ok) {
-        await removerDaFila(db, item.id);
-        enviados++;
-      }
-    } catch (err) {
-      // Mantém na fila para tentar de novo
-    }
+      if (res.ok) { await removerDaFila(db, item.id); enviados++; }
+    } catch (err) {}
   }
-
   if (enviados > 0) {
     const clients = await self.clients.matchAll();
-    clients.forEach(client =>
-      client.postMessage({ tipo: 'sync-completo', enviados })
-    );
+    clients.forEach(client => client.postMessage({ tipo: 'sync-completo', enviados }));
   }
 }
 
-// ── IndexedDB helpers ──
 function abrirDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open('curralflux-offline', 1);
