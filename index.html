@@ -2957,16 +2957,15 @@ async function gerarPDFCompleto() {
     if (hex.length === 4) hex = '#' + hex[1]+hex[1]+hex[2]+hex[2]+hex[3]+hex[3];
     return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
   }
-  function headerP(titulo) {
-    pdf.setFillColor(60,30,15); pdf.rect(0,0,WP,14,'F');
+  function headerP(titulo, w, h) {
+    w=w||WP; h=h||HP;
+    pdf.setFillColor(60,30,15); pdf.rect(0,0,w,14,'F');
     pdf.setTextColor(255,255,255); pdf.setFontSize(11); pdf.setFont('helvetica','bold');
     pdf.text('CURRAL FLUX', 8, 10);
     pdf.setFontSize(8); pdf.setFont('helvetica','normal');
-    pdf.text('Grupo Agroparanã — ' + titulo, WP-8, 10, {align:'right'});
-  }
-  function rodape(w,h) {
+    pdf.text('Grupo Agroparana — ' + titulo, w-8, 10, {align:'right'});
     pdf.setFontSize(7); pdf.setTextColor(150,150,150);
-    pdf.text('Gerado em: ' + hoje, (w||WP)-8, (h||HP)-4, {align:'right'});
+    pdf.text('Gerado em: ' + hoje, w-8, h-4, {align:'right'});
   }
 
   var COR_PDF = {
@@ -2975,60 +2974,59 @@ async function gerarPDFCompleto() {
   };
   var LBL_PDF = {
     ocupada:'Ocupada', embarcada:'Embarcada', limpeza:'Limpeza iniciada',
-    transporte:'Em transporte', cascalho:'Cascalho', reparacao:'Reparação infra', liberada:'Liberada'
+    transporte:'Em transporte', cascalho:'Cascalho', reparacao:'Reparacao infra', liberada:'Liberada'
   };
 
+  function cardResumo(label, valor, cor, x, y2, w) {
+    pdf.setFillColor(255,255,255); pdf.roundedRect(x, y2, w, 20, 2, 2, 'F');
+    pdf.setDrawColor(220,210,195); pdf.roundedRect(x, y2, w, 20, 2, 2, 'S');
+    var rgb = hexToRgb(typeof cor==='string'&&cor[0]==='#'?cor:'#333333');
+    pdf.setFontSize(14); pdf.setFont('helvetica','bold'); pdf.setTextColor(rgb[0],rgb[1],rgb[2]);
+    pdf.text(String(valor), x+w/2, y2+11, {align:'center'});
+    pdf.setFontSize(6); pdf.setFont('helvetica','normal'); pdf.setTextColor(120,120,120);
+    pdf.text(label, x+w/2, y2+17, {align:'center'});
+  }
+
+  function blocoResumo(titulo, grupo, corTitulo, corTaxa, y0) {
+    pdf.setFontSize(8); pdf.setFont('helvetica','bold'); pdf.setTextColor(corTitulo[0],corTitulo[1],corTitulo[2]);
+    pdf.text(titulo, 10, y0); y0 += 3;
+    var bw=(WP-20)/6; var bx=10;
+    var oc=grupo.filter(function(b){return b.status==='ocupada';}).length;
+    var li=grupo.filter(function(b){return b.status==='liberada';}).length;
+    var lp=grupo.filter(function(b){return ['limpeza','transporte','cascalho','reparacao'].includes(b.status);}).length;
+    var em=grupo.filter(function(b){return b.status==='embarcada';}).length;
+    var tx=grupo.length>0?Math.round((oc+em)/grupo.length*100):0;
+    cardResumo('Total', grupo.length, '#333333', bx, y0, bw); bx+=bw+1;
+    cardResumo('Ocupadas', oc, '#F44336', bx, y0, bw); bx+=bw+1;
+    cardResumo('Disponiveis', li, '#4CAF50', bx, y0, bw); bx+=bw+1;
+    cardResumo('Em limpeza', lp, '#2196F3', bx, y0, bw); bx+=bw+1;
+    cardResumo('Embarcadas', em, '#FF9800', bx, y0, bw); bx+=bw+1;
+    cardResumo('Tx. Ocupacao', tx+'%', corTaxa, bx, y0, bw);
+    return y0 + 24;
+  }
+
   // ══════════════════════════════════
-  // PÁG 1 — RESUMO GERAL (vetorial)
+  // PAG 1 — RESUMO GERAL (vetorial)
   // ══════════════════════════════════
   headerP('Resumo Geral');
-  var y = 20;
+  var y = 18;
   var todos = Object.values(BD);
   var ENGORDA = ['Confinamento 1','Confinamento 2','Remanga'];
   var RECRIA  = ['Confinamento 3','Sequestro'];
 
-  function cardResumo(label, valor, cor, x, y2, w) {
-    pdf.setFillColor(255,255,255); pdf.roundedRect(x, y2, w, 22, 2, 2, 'F');
-    pdf.setDrawColor(220,210,195); pdf.roundedRect(x, y2, w, 22, 2, 2, 'S');
-    var rgb = hexToRgb(typeof cor === 'string' && cor[0]==='#' ? cor : '#333333');
-    pdf.setFontSize(16); pdf.setFont('helvetica','bold'); pdf.setTextColor(rgb[0],rgb[1],rgb[2]);
-    pdf.text(String(valor), x+w/2, y2+12, {align:'center'});
-    pdf.setFontSize(7); pdf.setFont('helvetica','normal'); pdf.setTextColor(120,120,120);
-    pdf.text(label, x+w/2, y2+19, {align:'center'});
-  }
-
-  function blocoResumo(titulo, grupo, corTitulo, corTaxa, y0) {
-    pdf.setFontSize(9); pdf.setFont('helvetica','bold'); pdf.setTextColor(corTitulo[0],corTitulo[1],corTitulo[2]);
-    pdf.text(titulo, 10, y0); y0 += 3;
-    var bw = (WP-20)/6; var bx = 10;
-    var oc = grupo.filter(function(b){return b.status==='ocupada';}).length;
-    var li = grupo.filter(function(b){return b.status==='liberada';}).length;
-    var lp = grupo.filter(function(b){return ['limpeza','transporte','cascalho','reparacao'].includes(b.status);}).length;
-    var em = grupo.filter(function(b){return b.status==='embarcada';}).length;
-    var tx = grupo.length>0?Math.round((oc+em)/grupo.length*100):0;
-    cardResumo('Total', grupo.length, '#333333', bx, y0, bw); bx+=bw+1;
-    cardResumo('Ocupadas', oc, '#F44336', bx, y0, bw); bx+=bw+1;
-    cardResumo('Disponíveis', li, '#4CAF50', bx, y0, bw); bx+=bw+1;
-    cardResumo('Em limpeza', lp, '#2196F3', bx, y0, bw); bx+=bw+1;
-    cardResumo('Embarcadas', em, '#FF9800', bx, y0, bw); bx+=bw+1;
-    cardResumo('Tx. Ocupação', tx+'%', corTaxa, bx, y0, bw);
-    return y0 + 26;
-  }
-
-  // Resumo geral
-  pdf.setFontSize(9); pdf.setFont('helvetica','bold'); pdf.setTextColor(60,30,15);
+  pdf.setFontSize(8); pdf.setFont('helvetica','bold'); pdf.setTextColor(60,30,15);
   pdf.text('RESUMO GERAL', 10, y); y += 3;
-  var bw0 = (WP-20)/5; var bx0 = 10;
+  var bw0=(WP-20)/5; var bx0=10;
   var oc0=todos.filter(function(b){return b.status==='ocupada';}).length;
   var li0=todos.filter(function(b){return b.status==='liberada';}).length;
   var lp0=todos.filter(function(b){return ['limpeza','transporte','cascalho','reparacao'].includes(b.status);}).length;
   var em0=todos.filter(function(b){return b.status==='embarcada';}).length;
   cardResumo('Total Currais', todos.length, '#333333', bx0, y, bw0); bx0+=bw0+1;
   cardResumo('Ocupadas', oc0, '#F44336', bx0, y, bw0); bx0+=bw0+1;
-  cardResumo('Disponíveis', li0, '#4CAF50', bx0, y, bw0); bx0+=bw0+1;
+  cardResumo('Disponiveis', li0, '#4CAF50', bx0, y, bw0); bx0+=bw0+1;
   cardResumo('Em limpeza', lp0, '#2196F3', bx0, y, bw0); bx0+=bw0+1;
   cardResumo('Embarcadas', em0, '#FF9800', bx0, y, bw0);
-  y += 28;
+  y += 26;
 
   var eng = todos.filter(function(b){return ENGORDA.includes(b.confinamento);});
   var rec = todos.filter(function(b){return RECRIA.includes(b.confinamento);});
@@ -3037,156 +3035,105 @@ async function gerarPDFCompleto() {
   y = blocoResumo('RECRIA CONFINADA (Confinamento 3 e Sequestro)', rec, [104,98,48], '#686230', y);
   y += 6;
 
-  // Distribuição por status (barras horizontais)
+  // Distribuicao por status
   pdf.setFontSize(8); pdf.setFont('helvetica','bold'); pdf.setTextColor(60,30,15);
-  pdf.text('Distribuição atual por status', 10, y); y += 5;
+  pdf.text('Distribuicao atual por status', 10, y); y += 5;
   Object.entries(COR_PDF).forEach(function(e) {
     var st=e[0], cor=e[1];
-    var cnt = todos.filter(function(b){return b.status===st;}).length;
-    if (cnt === 0) return;
-    var pct = todos.length>0?(cnt/todos.length):0;
-    var rgb = hexToRgb(cor);
+    var cnt=todos.filter(function(b){return b.status===st;}).length;
+    if (cnt===0) return;
+    var pct=todos.length>0?(cnt/todos.length):0;
+    var rgb=hexToRgb(cor);
     pdf.setFillColor(rgb[0],rgb[1],rgb[2]);
-    pdf.rect(10, y, pct*(WP-50), 5, 'F');
-    pdf.setFontSize(7); pdf.setFont('helvetica','normal'); pdf.setTextColor(60,60,60);
-    pdf.text((LBL_PDF[st]||st) + ': ' + cnt, 10+(WP-50)+2, y+4);
-    y += 7;
+    pdf.rect(10, y, pct*(WP-50), 4, 'F');
+    pdf.setFontSize(6); pdf.setFont('helvetica','normal'); pdf.setTextColor(60,60,60);
+    pdf.text((LBL_PDF[st]||st)+': '+cnt, 10+(WP-50)+2, y+3);
+    y += 6;
   });
 
-  rodape();
+  // ══════════════════════════════════════════════════════
+  // PAG 2 — MAPA COMPLETO (todos confinamentos numa pagina landscape)
+  // ══════════════════════════════════════════════════════
+  pdf.addPage({orientation:'landscape', format:'a4'});
+  var WL=297, HL=210;
+  headerP('Mapa de Ocupacao', WL, HL);
 
-  // ══════════════════════════════════
-  // PÁG 2 — RANKING (vetorial)
-  // ══════════════════════════════════
-  pdf.addPage(); headerP('Ranking de Currais');
-  y = 20;
+  var COR_PDF2 = COR_PDF;
+  var LBL_PDF2 = LBL_PDF;
 
-  // Ranking por ciclos
-  var ciclosPorBaia = {};
-  CICLOS_DATA.forEach(function(c) {
-    if (!ciclosPorBaia[c.ID_Baia]) ciclosPorBaia[c.ID_Baia] = 0;
-    ciclosPorBaia[c.ID_Baia]++;
-  });
-  var rankCiclos = Object.entries(ciclosPorBaia)
-    .sort(function(a,b){return b[1]-a[1];})
-    .slice(0,20);
+  // Calcular quantas colunas e linhas no total para distribuir na página
+  // Vamos colocar os confinamentos em colunas lado a lado
+  // Layout: Conf1 | Conf2 | (Conf3+Seq+Rem empilhados)
+  var margL=6, margT=16, margB=14;
+  var areaW=WL-margL*2;
+  var areaH=HL-margT-margB;
 
-  pdf.setFontSize(9); pdf.setFont('helvetica','bold'); pdf.setTextColor(60,30,15);
-  pdf.text('MAIS CICLOS COMPLETOS', 10, y); y+=6;
+  // Calcular tamanho de célula baseado no maior confinamento
+  // Conf1: 12 cols x 8 linhas; Conf2: 6 cols x 10 linhas; Conf3: 11 cols x 2; Seq: 14 cols x 2; Rem: 4 cols x 1
+  // Dividir área em 3 seções horizontais: Conf1 | Conf2 | Conf3+Seq+Rem
+  var sec1W = areaW * 0.42; // Conf1 (12 colunas)
+  var sec2W = areaW * 0.23; // Conf2 (6 colunas)
+  var sec3W = areaW * 0.33; // Conf3 + Seq + Rem (14 colunas max)
 
-  var maxCic = rankCiclos.length>0?rankCiclos[0][1]:1;
-  rankCiclos.forEach(function(e, i) {
-    var id=e[0], cnt=e[1];
-    var b = BD[id]||{};
-    var nome = b.nome||id;
-    var barW = (cnt/maxCic)*(WP-60);
-    pdf.setFillColor(192,131,50); pdf.rect(10, y, barW, 4, 'F');
-    pdf.setFontSize(7); pdf.setFont('helvetica','normal'); pdf.setTextColor(50,50,50);
-    pdf.text((i+1)+'. '+nome, 10, y-1);
-    pdf.setTextColor(192,131,50); pdf.setFont('helvetica','bold');
-    pdf.text(cnt+' ciclo'+(cnt>1?'s':''), WP-8, y+3, {align:'right'});
-    pdf.setTextColor(100,100,100); pdf.setFont('helvetica','normal');
-    pdf.text(b.confinamento||'', WP-8, y-1, {align:'right'});
-    y += 10;
-    if (y > HP-20) { pdf.addPage(); headerP('Ranking de Currais'); y=20; }
-  });
+  function desenharConf(conf, sx, sy, sw, sh) {
+    var maxC=0;
+    conf.rows.forEach(function(r){if(r.n>maxC)maxC=r.n;});
+    var nL=conf.rows.length;
+    var lblW=8, gap=1;
+    var cW=Math.min((sw-lblW-(maxC+1)*gap)/maxC, 18);
+    var cH=Math.min((sh-(nL+1)*gap)/nL, 11);
+    cW=Math.max(cW,5); cH=Math.max(cH,4);
+    var fSz=Math.max(4,Math.min(cH*0.6,cW*0.5,8));
 
-  rodape();
+    // Titulo do confinamento
+    pdf.setFontSize(7); pdf.setFont('helvetica','bold'); pdf.setTextColor(40,40,40);
+    pdf.text(conf.nome.toUpperCase(), sx, sy+4);
 
-  // ══════════════════════════════════
-  // PÁGS 3+: MAPA VETORIAL
-  // ══════════════════════════════════
-  for (var ci = 0; ci < CONFS.length; ci++) {
-    var conf = CONFS[ci];
-    pdf.addPage({orientation:'landscape', format:'a4'});
-    var WL = 297, HL = 210;
-
-    // Header
-    pdf.setFillColor(60,30,15); pdf.rect(0,0,WL,14,'F');
-    pdf.setTextColor(255,255,255); pdf.setFontSize(11); pdf.setFont('helvetica','bold');
-    pdf.text('CURRAL FLUX — ' + conf.nome.toUpperCase(), 8, 10);
-    pdf.setFontSize(8); pdf.setFont('helvetica','normal');
-    pdf.text('Grupo Agroparanã — Mapa de Ocupação', WL-8, 10, {align:'right'});
-
-    // Stats
-    var todos2 = [];
-    conf.rows.forEach(function(r){ for(var j=1;j<=r.n;j++) todos2.push(gId(conf,r,j)); });
-    var counts2 = {};
-    todos2.forEach(function(id){
-      var st=(BD[id]&&BD[id].status)||'liberada';
-      counts2[st]=(counts2[st]||0)+1;
-    });
-
-    // Badges no topo
-    var bx = 8; var by = 20;
-    pdf.setFontSize(11); pdf.setFont('helvetica','bold'); pdf.setTextColor(20,20,20);
-    pdf.text(conf.nome, bx, by); bx += pdf.getTextWidth(conf.nome)+4;
-    pdf.setFontSize(7); pdf.setFont('helvetica','normal');
-    var badges = [{label:todos2.length+' currais',bg:[220,220,220],fg:[50,50,50]}];
-    Object.entries(counts2).forEach(function(e){
-      var rgb=hexToRgb(COR_PDF[e[0]]||'#999');
-      badges.push({label:e[1]+' '+(LBL_PDF[e[0]]||e[0]).toLowerCase(),bg:rgb,fg:[255,255,255]});
-    });
-    badges.forEach(function(b){
-      var tw=pdf.getTextWidth(b.label)+4;
-      pdf.setFillColor(b.bg[0],b.bg[1],b.bg[2]);
-      pdf.roundedRect(bx,by-5,tw,6,1,1,'F');
-      pdf.setTextColor(b.fg[0],b.fg[1],b.fg[2]);
-      pdf.text(b.label,bx+2,by); bx+=tw+3;
-    });
-
-    // Calcular grid
-    var maxCols=0;
-    conf.rows.forEach(function(r){if(r.n>maxCols)maxCols=r.n;});
-    var numL=conf.rows.length;
-    var margL=8, margT=26, margB=16;
-    var areaW=WL-margL*2, areaH=HL-margT-margB;
-    var lblW=10, gap=1.5;
-    // Calcular tamanho máximo que cabe sem cortar
-    var celW=(areaW-lblW-(maxCols+1)*gap)/maxCols;
-    var celH=(areaH-(numL+1)*gap)/numL;
-    celW=Math.min(celW,22); celH=Math.min(celH,14);
-    var fSz=Math.max(5,Math.min(celH*0.6,celW*0.5,9));
-    var gridW=lblW+gap+(celW+gap)*maxCols;
-    var gridH=(celH+gap)*numL;
-    var gx=margL; // sempre começar da esquerda
-    var gy=margT+(areaH-gridH)/2;
-
+    var gy2=sy+7;
     conf.rows.forEach(function(r,ri){
-      var ns=[];
-      for(var j=1;j<=r.n;j++) ns.push(j); // sempre ltr
-      var ry=gy+ri*(celH+gap);
-      // Label linha
+      var ns=[]; for(var j=1;j<=r.n;j++) ns.push(j);
+      var ry=gy2+ri*(cH+gap);
       pdf.setFontSize(fSz); pdf.setFont('helvetica','bold'); pdf.setTextColor(80,80,80);
-      pdf.text(r.l, gx+lblW, ry+celH*0.7, {align:'right'});
-      // Células
+      pdf.text(r.l, sx+lblW, ry+cH*0.72, {align:'right'});
       ns.forEach(function(n,ni){
         var id=gId(conf,r,n);
         var st=(BD[id]&&BD[id].status)||'liberada';
-        var rgb=hexToRgb(COR_PDF[st]||'#cccccc');
-        var cx=gx+lblW+gap+ni*(celW+gap);
+        var rgb=hexToRgb(COR_PDF2[st]||'#cccccc');
+        var cx=sx+lblW+gap+ni*(cW+gap);
         pdf.setFillColor(rgb[0],rgb[1],rgb[2]);
-        pdf.roundedRect(cx,ry,celW,celH,1,1,'F');
+        pdf.roundedRect(cx,ry,cW,cH,0.8,0.8,'F');
         pdf.setTextColor(255,255,255); pdf.setFontSize(fSz); pdf.setFont('helvetica','bold');
-        pdf.text(String(n),cx+celW/2,ry+celH*0.7,{align:'center'});
+        pdf.text(String(n),cx+cW/2,ry+cH*0.72,{align:'center'});
       });
     });
-
-    // Legenda rodapé
-    var legY=HL-11;
-    pdf.setDrawColor(210,210,210); pdf.line(8,legY-2,WL-8,legY-2);
-    var legX=8;
-    Object.entries(COR_PDF).forEach(function(e){
-      var rgb=hexToRgb(e[1]);
-      pdf.setFillColor(rgb[0],rgb[1],rgb[2]);
-      pdf.roundedRect(legX,legY,4,4,0.5,0.5,'F');
-      pdf.setTextColor(50,50,50); pdf.setFontSize(6); pdf.setFont('helvetica','normal');
-      var lbl=LBL_PDF[e[0]]||e[0];
-      pdf.text(lbl,legX+5,legY+3);
-      legX+=5+pdf.getTextWidth(lbl)+5;
-    });
-    rodape(WL,HL);
   }
+
+  // Desenhar confinamentos
+  var conf1=CONFS[0], conf2=CONFS[1], conf3=CONFS[2], confSeq=CONFS[3], confRem=CONFS[4];
+
+  desenharConf(conf1, margL, margT, sec1W, areaH);
+  desenharConf(conf2, margL+sec1W+2, margT, sec2W, areaH);
+
+  // Seção 3: Conf3, Seq, Rem empilhados
+  var sx3=margL+sec1W+sec2W+4;
+  var altConf3=areaH*0.22, altSeq=areaH*0.22, altRem=areaH*0.12;
+  desenharConf(conf3, sx3, margT, sec3W, altConf3);
+  desenharConf(confSeq, sx3, margT+altConf3+4, sec3W, altSeq);
+  desenharConf(confRem, sx3, margT+altConf3+altSeq+8, sec3W, altRem);
+
+  // Legenda no rodape
+  var legY=HL-10;
+  pdf.setDrawColor(200,200,200); pdf.line(6,legY-2,WL-6,legY-2);
+  var legX=6;
+  Object.entries(COR_PDF).forEach(function(e){
+    var rgb=hexToRgb(e[1]);
+    pdf.setFillColor(rgb[0],rgb[1],rgb[2]);
+    pdf.roundedRect(legX,legY,4,4,0.5,0.5,'F');
+    pdf.setTextColor(50,50,50); pdf.setFontSize(6); pdf.setFont('helvetica','normal');
+    var lbl=LBL_PDF[e[0]]||e[0];
+    pdf.text(lbl,legX+5,legY+3);
+    legX+=5+pdf.getTextWidth(lbl)+5;
+  });
 
   pdf.save('CurralFlux_Completo_'+dataArq+'.pdf');
 }
