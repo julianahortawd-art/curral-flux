@@ -2952,48 +2952,129 @@ async function gerarPDFCompleto() {
   var dataArq = new Date().toISOString().slice(0,10);
 
   function hexToRgb(hex) {
-    if (hex.length === 4) hex = '#' + hex[1]+hex[1]+hex[2]+hex[2]+hex[3]+hex[3];
-    return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+    if (hex.length === 4) hex = '#'+hex[1]+hex[1]+hex[2]+hex[2]+hex[3]+hex[3];
+    return [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)];
   }
 
   var COR_PDF = {
-    ocupada:'#F44336', embarcada:'#FF9800', limpeza:'#2196F3',
-    transporte:'#AB47BC', cascalho:'#795548', reparacao:'#FFC107', liberada:'#4CAF50'
+    ocupada:'#F44336',embarcada:'#FF9800',limpeza:'#2196F3',
+    transporte:'#AB47BC',cascalho:'#795548',reparacao:'#FFC107',liberada:'#4CAF50'
   };
   var LBL_PDF = {
-    ocupada:'Ocupada', embarcada:'Embarcada', limpeza:'Limpeza iniciada',
-    transporte:'Em transporte', cascalho:'Cascalho', reparacao:'Reparacao infra', liberada:'Liberada'
+    ocupada:'Ocupada',embarcada:'Embarcada',limpeza:'Limpeza iniciada',
+    transporte:'Em transporte',cascalho:'Cascalho',reparacao:'Reparacao infra',liberada:'Liberada'
   };
 
-  // ══════════════════════════════════
-  // PDF 1 — RESUMO (portrait)
-  // ══════════════════════════════════
-  var pdf1 = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  var WP=210, HP=297;
+  // Inicia em landscape — página 1 será o mapa, página 2 o resumo
+  // Assim garantimos que landscape funciona de verdade
+  var pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-  function h1(titulo) {
-    pdf1.setFillColor(60,30,15); pdf1.rect(0,0,WP,14,'F');
-    pdf1.setTextColor(255,255,255); pdf1.setFontSize(11); pdf1.setFont('helvetica','bold');
-    pdf1.text('CURRAL FLUX', 8, 10);
-    pdf1.setFontSize(8); pdf1.setFont('helvetica','normal');
-    pdf1.text('Grupo Agroparana — '+titulo, WP-8, 10, {align:'right'});
-    pdf1.setFontSize(7); pdf1.setTextColor(150,150,150);
-    pdf1.text('Gerado em: '+hoje, WP-8, HP-4, {align:'right'});
+  // ══════════════════════════════════
+  // PÁG 1 — MAPA (landscape 297x210)
+  // ══════════════════════════════════
+  var WL=297, HL=210;
+
+  pdf.setFillColor(60,30,15); pdf.rect(0,0,WL,14,'F');
+  pdf.setTextColor(255,255,255); pdf.setFontSize(11); pdf.setFont('helvetica','bold');
+  pdf.text('CURRAL FLUX', 8, 10);
+  pdf.setFontSize(8); pdf.setFont('helvetica','normal');
+  pdf.text('Grupo Agroparana — Mapa de Ocupacao', WL-8, 10, {align:'right'});
+
+  var margL=6, margT=17, gap=1.0, lblW=7, sep=3, div=3;
+  var areaW=WL-margL*2;
+  var areaH=HL-margT-14;
+
+  var CEL=Math.min(
+    (areaW-2*lblW-sep-(18+1)*gap)/18,
+    (areaW-2*lblW-sep-(25+1)*gap)/25,
+    (areaH-3*7-2*div-(13+1)*gap)/13
+  );
+  CEL=Math.floor(CEL*10)/10;
+  var FSZ=Math.max(4.5,Math.min(CEL*0.65,8));
+
+  function desenhar(conf, sx, sy) {
+    pdf.setFontSize(6.5); pdf.setFont('helvetica','bold'); pdf.setTextColor(40,40,40);
+    pdf.text(conf.nome.toUpperCase(), sx, sy+4);
+    var gy2=sy+7;
+    conf.rows.forEach(function(r,ri) {
+      var ns=[]; for(var j=1;j<=r.n;j++) ns.push(j);
+      var ry=gy2+ri*(CEL+gap);
+      pdf.setFontSize(FSZ); pdf.setFont('helvetica','bold'); pdf.setTextColor(80,80,80);
+      pdf.text(r.l, sx+lblW, ry+CEL*0.72, {align:'right'});
+      ns.forEach(function(n,ni) {
+        var id=gId(conf,r,n);
+        var st=(BD[id]&&BD[id].status)||'liberada';
+        var rgb=hexToRgb(COR_PDF[st]||'#cccccc');
+        var cx=sx+lblW+gap+ni*(CEL+gap);
+        pdf.setFillColor(rgb[0],rgb[1],rgb[2]);
+        pdf.roundedRect(cx,ry,CEL,CEL,0.8,0.8,'F');
+        pdf.setTextColor(255,255,255); pdf.setFontSize(FSZ); pdf.setFont('helvetica','bold');
+        pdf.text(String(n),cx+CEL/2,ry+CEL*0.72,{align:'center'});
+      });
+    });
   }
 
+  var c1=CONFS[0],c2=CONFS[1],c3=CONFS[2],cSeq=CONFS[3],cRem=CONFS[4];
+  var y1=margT;
+  var wC1=lblW+gap+12*(CEL+gap);
+  desenhar(c1, margL, y1);
+  desenhar(c2, margL+wC1+sep, y1);
+
+  var y2=y1+7+10*(CEL+gap)+div;
+  pdf.setDrawColor(210,210,210); pdf.line(margL,y2-1,WL-margL,y2-1);
+  var wSeq=lblW+gap+14*(CEL+gap);
+  desenhar(cSeq, margL, y2);
+  desenhar(c3, margL+wSeq+sep, y2);
+
+  var y3=y2+7+2*(CEL+gap)+div;
+  pdf.setDrawColor(210,210,210); pdf.line(margL,y3-1,WL-margL,y3-1);
+  desenhar(cRem, margL, y3);
+
+  // Legenda
+  var legY=HL-9;
+  pdf.setDrawColor(200,200,200); pdf.line(6,legY-2,WL-6,legY-2);
+  var legX=6;
+  Object.entries(COR_PDF).forEach(function(e){
+    var rgb=hexToRgb(e[1]);
+    pdf.setFillColor(rgb[0],rgb[1],rgb[2]);
+    pdf.roundedRect(legX,legY,4,4,0.5,0.5,'F');
+    pdf.setTextColor(50,50,50); pdf.setFontSize(6); pdf.setFont('helvetica','normal');
+    var lbl=LBL_PDF[e[0]]||e[0];
+    pdf.text(lbl,legX+5,legY+3);
+    legX+=5+pdf.getTextWidth(lbl)+4;
+  });
+  pdf.setFontSize(6); pdf.setTextColor(150,150,150);
+  pdf.text('Gerado em: '+hoje, WL-8, HL-3, {align:'right'});
+
+  // ══════════════════════════════════
+  // PÁG 2 — RESUMO (portrait 210x297)
+  // ══════════════════════════════════
+  pdf.addPage('a4', 'portrait');
+  var WP=210, HP=297;
+  // Atualizar contexto para portrait
+  pdf.setPage(2);
+
+  pdf.setFillColor(60,30,15); pdf.rect(0,0,WP,14,'F');
+  pdf.setTextColor(255,255,255); pdf.setFontSize(11); pdf.setFont('helvetica','bold');
+  pdf.text('CURRAL FLUX', 8, 10);
+  pdf.setFontSize(8); pdf.setFont('helvetica','normal');
+  pdf.text('Grupo Agroparana — Resumo Geral', WP-8, 10, {align:'right'});
+  pdf.setFontSize(7); pdf.setTextColor(150,150,150);
+  pdf.text('Gerado em: '+hoje, WP-8, HP-4, {align:'right'});
+
   function card(label, valor, cor, x, y2, w) {
-    pdf1.setFillColor(255,255,255); pdf1.roundedRect(x,y2,w,20,2,2,'F');
-    pdf1.setDrawColor(220,210,195); pdf1.roundedRect(x,y2,w,20,2,2,'S');
+    pdf.setFillColor(255,255,255); pdf.roundedRect(x,y2,w,20,2,2,'F');
+    pdf.setDrawColor(220,210,195); pdf.roundedRect(x,y2,w,20,2,2,'S');
     var rgb=hexToRgb(cor);
-    pdf1.setFontSize(14); pdf1.setFont('helvetica','bold'); pdf1.setTextColor(rgb[0],rgb[1],rgb[2]);
-    pdf1.text(String(valor), x+w/2, y2+11, {align:'center'});
-    pdf1.setFontSize(6); pdf1.setFont('helvetica','normal'); pdf1.setTextColor(120,120,120);
-    pdf1.text(label, x+w/2, y2+17, {align:'center'});
+    pdf.setFontSize(14); pdf.setFont('helvetica','bold'); pdf.setTextColor(rgb[0],rgb[1],rgb[2]);
+    pdf.text(String(valor), x+w/2, y2+11, {align:'center'});
+    pdf.setFontSize(6); pdf.setFont('helvetica','normal'); pdf.setTextColor(120,120,120);
+    pdf.text(label, x+w/2, y2+17, {align:'center'});
   }
 
   function bloco(titulo, grupo, cor3, corTaxa, y0) {
-    pdf1.setFontSize(8); pdf1.setFont('helvetica','bold'); pdf1.setTextColor(cor3[0],cor3[1],cor3[2]);
-    pdf1.text(titulo, 10, y0); y0+=3;
+    pdf.setFontSize(8); pdf.setFont('helvetica','bold'); pdf.setTextColor(cor3[0],cor3[1],cor3[2]);
+    pdf.text(titulo, 10, y0); y0+=3;
     var bw=(WP-20)/6, bx=10;
     var oc=grupo.filter(function(b){return b.status==='ocupada';}).length;
     var li=grupo.filter(function(b){return b.status==='liberada';}).length;
@@ -3009,13 +3090,12 @@ async function gerarPDFCompleto() {
     return y0+24;
   }
 
-  h1('Resumo Geral');
   var y=18, todos=Object.values(BD);
   var ENGORDA=['Confinamento 1','Confinamento 2','Remanga'];
   var RECRIA=['Confinamento 3','Sequestro'];
 
-  pdf1.setFontSize(8); pdf1.setFont('helvetica','bold'); pdf1.setTextColor(60,30,15);
-  pdf1.text('RESUMO GERAL', 10, y); y+=3;
+  pdf.setFontSize(8); pdf.setFont('helvetica','bold'); pdf.setTextColor(60,30,15);
+  pdf.text('RESUMO GERAL', 10, y); y+=3;
   var bw0=(WP-20)/5, bx0=10;
   card('Total Currais',todos.length,'#333333',bx0,y,bw0); bx0+=bw0+1;
   card('Ocupadas',todos.filter(function(b){return b.status==='ocupada';}).length,'#F44336',bx0,y,bw0); bx0+=bw0+1;
@@ -3029,103 +3109,8 @@ async function gerarPDFCompleto() {
   y=bloco('ENGORDA (Confinamento 1, 2 e Remanga)',eng,[140,77,46],'#C08332',y);
   y+=2;
   y=bloco('RECRIA CONFINADA (Confinamento 3 e Sequestro)',rec,[104,98,48],'#686230',y);
-  y+=6;
 
-  pdf1.setFontSize(8); pdf1.setFont('helvetica','bold'); pdf1.setTextColor(60,30,15);
-  pdf1.text('Distribuicao atual por status', 10, y); y+=5;
-  Object.entries(COR_PDF).forEach(function(e) {
-    var cnt=todos.filter(function(b){return b.status===e[0];}).length;
-    if(cnt===0) return;
-    var rgb=hexToRgb(e[1]);
-    pdf1.setFillColor(rgb[0],rgb[1],rgb[2]);
-    pdf1.rect(10,y,(cnt/todos.length)*(WP-50),4,'F');
-    pdf1.setFontSize(6); pdf1.setFont('helvetica','normal'); pdf1.setTextColor(60,60,60);
-    pdf1.text((LBL_PDF[e[0]]||e[0])+': '+cnt, 10+(WP-50)+2, y+3);
-    y+=6;
-  });
-
-  pdf1.save('CurralFlux_Resumo_'+dataArq+'.pdf');
-
-  // ══════════════════════════════════
-  // PDF 2 — MAPA (landscape)
-  // ══════════════════════════════════
-  var pdf2 = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  var WL=297, HL=210;
-
-  pdf2.setFillColor(60,30,15); pdf2.rect(0,0,WL,14,'F');
-  pdf2.setTextColor(255,255,255); pdf2.setFontSize(11); pdf2.setFont('helvetica','bold');
-  pdf2.text('CURRAL FLUX', 8, 10);
-  pdf2.setFontSize(8); pdf2.setFont('helvetica','normal');
-  pdf2.text('Grupo Agroparana — Mapa de Ocupacao', WL-8, 10, {align:'right'});
-
-  var margL=6, margT=17, gap=1.0, lblW=7, sep=3, div=3;
-  var areaW=WL-margL*2;
-  var areaH=HL-margT-14;
-
-  // Célula calculada para caber TUDO
-  var CEL=Math.min(
-    (areaW-2*lblW-sep-(18+1)*gap)/18,  // faixa1: 12+6
-    (areaW-2*lblW-sep-(25+1)*gap)/25,  // faixa2: 14+11
-    (areaH-3*7-2*div-(13+1)*gap)/13    // vertical: 10+2+1
-  );
-  CEL=Math.floor(CEL*10)/10;
-  var FSZ=Math.max(4.5,Math.min(CEL*0.65,8));
-
-  function desenhar(conf, sx, sy) {
-    pdf2.setFontSize(6.5); pdf2.setFont('helvetica','bold'); pdf2.setTextColor(40,40,40);
-    pdf2.text(conf.nome.toUpperCase(), sx, sy+4);
-    var gy2=sy+7;
-    conf.rows.forEach(function(r,ri) {
-      var ns=[]; for(var j=1;j<=r.n;j++) ns.push(j);
-      var ry=gy2+ri*(CEL+gap);
-      pdf2.setFontSize(FSZ); pdf2.setFont('helvetica','bold'); pdf2.setTextColor(80,80,80);
-      pdf2.text(r.l, sx+lblW, ry+CEL*0.72, {align:'right'});
-      ns.forEach(function(n,ni) {
-        var id=gId(conf,r,n);
-        var st=(BD[id]&&BD[id].status)||'liberada';
-        var rgb=hexToRgb(COR_PDF[st]||'#cccccc');
-        var cx=sx+lblW+gap+ni*(CEL+gap);
-        pdf2.setFillColor(rgb[0],rgb[1],rgb[2]);
-        pdf2.roundedRect(cx,ry,CEL,CEL,0.8,0.8,'F');
-        pdf2.setTextColor(255,255,255); pdf2.setFontSize(FSZ); pdf2.setFont('helvetica','bold');
-        pdf2.text(String(n),cx+CEL/2,ry+CEL*0.72,{align:'center'});
-      });
-    });
-  }
-
-  var c1=CONFS[0],c2=CONFS[1],c3=CONFS[2],cSeq=CONFS[3],cRem=CONFS[4];
-  var y1=margT;
-  var wC1=lblW+gap+12*(CEL+gap);
-  desenhar(c1, margL, y1);
-  desenhar(c2, margL+wC1+sep, y1);
-
-  var y2=y1+7+10*(CEL+gap)+div;
-  pdf2.setDrawColor(210,210,210); pdf2.line(margL,y2-1,WL-margL,y2-1);
-  var wSeq=lblW+gap+14*(CEL+gap);
-  desenhar(cSeq, margL, y2);
-  desenhar(c3, margL+wSeq+sep, y2);
-
-  var y3=y2+7+2*(CEL+gap)+div;
-  pdf2.setDrawColor(210,210,210); pdf2.line(margL,y3-1,WL-margL,y3-1);
-  desenhar(cRem, margL, y3);
-
-  // Legenda
-  var legY=HL-9;
-  pdf2.setDrawColor(200,200,200); pdf2.line(6,legY-2,WL-6,legY-2);
-  var legX=6;
-  Object.entries(COR_PDF).forEach(function(e){
-    var rgb=hexToRgb(e[1]);
-    pdf2.setFillColor(rgb[0],rgb[1],rgb[2]);
-    pdf2.roundedRect(legX,legY,4,4,0.5,0.5,'F');
-    pdf2.setTextColor(50,50,50); pdf2.setFontSize(6); pdf2.setFont('helvetica','normal');
-    var lbl=LBL_PDF[e[0]]||e[0];
-    pdf2.text(lbl,legX+5,legY+3);
-    legX+=5+pdf2.getTextWidth(lbl)+4;
-  });
-  pdf2.setFontSize(6); pdf2.setTextColor(150,150,150);
-  pdf2.text('Gerado em: '+hoje, WL-8, HL-3, {align:'right'});
-
-  pdf2.save('CurralFlux_Mapa_'+dataArq+'.pdf');
+  pdf.save('CurralFlux_Completo_'+dataArq+'.pdf');
 }
 
 
