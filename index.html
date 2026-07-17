@@ -3081,12 +3081,15 @@ async function gerarPDFCompleto() {
 
   // Célula calculada para caber TUDO na página landscape
   // Faixa 2 (Seq 14 + Conf3 11 = 25 cols) é a restrição horizontal mais apertada
-  var sep = 5; // separador entre confinamentos lado a lado
-  var div = 4; // separador entre faixas verticais
+  var sep = 3; // separador entre confinamentos lado a lado
+  var div = 3; // separador entre faixas verticais
+  // Faixa 1: Conf1(12) + sep + Conf2(6) = 18 cels + 2 labels + 1 sep
+  // Faixa 2: Seq(14) + sep + Conf3(11) = 25 cels + 2 labels + 1 sep
+  // Vertical: titulo(7) + 10*(CEL+gap) + div + titulo(7) + 2*(CEL+gap) + div + titulo(7) + 1*(CEL+gap)
   var CEL = Math.min(
-    (areaW - 2*lblW - sep - 18*gap) / 18,  // faixa 1: Conf1(12)+Conf2(6)
-    (areaW - 2*lblW - sep - 25*gap) / 25,  // faixa 2: Seq(14)+Conf3(11)
-    (areaH - 3*7 - 2*div - 13*gap) / 13    // vertical: 10+2+1 linhas + 3 títulos
+    (areaW - 2*lblW - sep - (18+1)*gap) / 18,
+    (areaW - 2*lblW - sep - (25+1)*gap) / 25,
+    (areaH - 3*7 - 2*div - (13+1)*gap) / 13
   );
   CEL = Math.floor(CEL * 10) / 10;
   var FSZ = Math.max(4.5, Math.min(CEL * 0.65, 8));
