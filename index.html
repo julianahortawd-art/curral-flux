@@ -3017,7 +3017,7 @@ async function gerarPDFCompleto() {
 
   // Resumo geral
   pdf.setFontSize(9); pdf.setFont('helvetica','bold'); pdf.setTextColor(60,30,15);
-  pdf.text('📊 Resumo Geral', 10, y); y += 3;
+  pdf.text('RESUMO GERAL', 10, y); y += 3;
   var bw0 = (WP-20)/5; var bx0 = 10;
   var oc0=todos.filter(function(b){return b.status==='ocupada';}).length;
   var li0=todos.filter(function(b){return b.status==='liberada';}).length;
@@ -3032,9 +3032,9 @@ async function gerarPDFCompleto() {
 
   var eng = todos.filter(function(b){return ENGORDA.includes(b.confinamento);});
   var rec = todos.filter(function(b){return RECRIA.includes(b.confinamento);});
-  y = blocoResumo('🐂 Engorda (Confinamento 1, 2 e Remanga)', eng, [140,77,46], '#C08332', y);
+  y = blocoResumo('ENGORDA (Confinamento 1, 2 e Remanga)', eng, [140,77,46], '#C08332', y);
   y += 2;
-  y = blocoResumo('🌱 Recria Confinada (Confinamento 3 e Sequestro)', rec, [104,98,48], '#686230', y);
+  y = blocoResumo('RECRIA CONFINADA (Confinamento 3 e Sequestro)', rec, [104,98,48], '#686230', y);
   y += 6;
 
   // Distribuição por status (barras horizontais)
@@ -3072,7 +3072,7 @@ async function gerarPDFCompleto() {
     .slice(0,20);
 
   pdf.setFontSize(9); pdf.setFont('helvetica','bold'); pdf.setTextColor(60,30,15);
-  pdf.text('🏆 Mais ciclos completos', 10, y); y+=6;
+  pdf.text('MAIS CICLOS COMPLETOS', 10, y); y+=6;
 
   var maxCic = rankCiclos.length>0?rankCiclos[0][1]:1;
   rankCiclos.forEach(function(e, i) {
@@ -3118,7 +3118,7 @@ async function gerarPDFCompleto() {
     });
 
     // Badges no topo
-    var bx = 8; var by = 21;
+    var bx = 8; var by = 20;
     pdf.setFontSize(11); pdf.setFont('helvetica','bold'); pdf.setTextColor(20,20,20);
     pdf.text(conf.nome, bx, by); bx += pdf.getTextWidth(conf.nome)+4;
     pdf.setFontSize(7); pdf.setFont('helvetica','normal');
@@ -3142,12 +3142,14 @@ async function gerarPDFCompleto() {
     var margL=8, margT=26, margB=16;
     var areaW=WL-margL*2, areaH=HL-margT-margB;
     var lblW=10, gap=1.5;
-    var celW=Math.min((areaW-lblW-(maxCols+1)*gap)/maxCols, 20);
-    var celH=Math.min((areaH-(numL+1)*gap)/numL, 13);
+    // Calcular tamanho máximo que cabe sem cortar
+    var celW=(areaW-lblW-(maxCols+1)*gap)/maxCols;
+    var celH=(areaH-(numL+1)*gap)/numL;
+    celW=Math.min(celW,22); celH=Math.min(celH,14);
     var fSz=Math.max(5,Math.min(celH*0.6,celW*0.5,9));
     var gridW=lblW+gap+(celW+gap)*maxCols;
     var gridH=(celH+gap)*numL;
-    var gx=margL+(areaW-gridW)/2;
+    var gx=margL; // sempre começar da esquerda
     var gy=margT+(areaH-gridH)/2;
 
     conf.rows.forEach(function(r,ri){
