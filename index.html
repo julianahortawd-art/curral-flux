@@ -2950,11 +2950,8 @@ async function gerarPDFCompleto() {
   var { jsPDF } = window.jspdf;
   var hoje = new Date().toLocaleString('pt-BR');
   var dataArq = new Date().toISOString().slice(0,10);
-
-  // PDF começa portrait
   var pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   var WP = 210, HP = 297;
-  var primeiraP = true;
 
   function headerPortrait(titulo) {
     pdf.setFillColor(60, 30, 15);
@@ -2966,236 +2963,219 @@ async function gerarPDFCompleto() {
     pdf.text('Grupo Agroparanã — ' + titulo, WP-10, 11, {align:'right'});
   }
 
-  function rodapePortrait() {
+  function rodape(w, h) {
     pdf.setFontSize(7); pdf.setTextColor(150,150,150);
-    pdf.text('Gerado em: ' + hoje, WP-10, HP-4, {align:'right'});
+    pdf.text('Gerado em: ' + hoje, (w||WP)-10, (h||HP)-4, {align:'right'});
   }
 
-  // Captura um elemento em container isolado de largura fixa
-  async function capturarLimpo(el, largura, bg) {
-    largura = largura || 900;
-    bg = bg || '#f5f0e8';
-
-    // Criar container isolado
-    var wrap = document.createElement('div');
-    wrap.style.cssText = 'position:fixed;top:-9999px;left:0;width:' + largura + 'px;background:' + bg + ';padding:20px;box-sizing:border-box;font-family:Arial,sans-serif;z-index:-1;';
-
-    // Clonar elemento
-    var clone = el.cloneNode(true);
-    clone.style.cssText = 'width:100%;';
-    wrap.appendChild(clone);
-    document.body.appendChild(wrap);
-    await new Promise(function(r){setTimeout(r,300);});
-
-    var canvas = await html2canvas(wrap, {
-      scale: 2,
-      backgroundColor: bg,
-      useCORS: true,
-      width: largura + 40,
-      windowWidth: largura + 40,
-      logging: false
-    });
-    document.body.removeChild(wrap);
-    return canvas;
-  }
-
-  // Coloca canvas no PDF portrait, fatiando se necessário
+  // Coloca canvas fatiado no PDF portrait
   function colocarCanvas(canvas, startY, titulo) {
     var marg = 12;
-    var pw = WP - marg * 2;
+    var pw = WP - marg*2;
     var razao = pw / canvas.width;
     var altTotal = canvas.height * razao;
     var altUtil = HP - startY - 12;
     var yOff = 0; var pg = 0;
-
     while (yOff < altTotal - 1) {
       if (pg > 0) { pdf.addPage(); headerPortrait(titulo); startY = 20; altUtil = HP - 32; }
       var f0 = yOff / altTotal;
       var f1 = Math.min((yOff + altUtil) / altTotal, 1);
       var sy = Math.round(f0 * canvas.height);
-      var sh = Math.round((f1 - f0) * canvas.height);
-      if (sh < 1) break;
+      var sh = Math.round((f1-f0) * canvas.height);
+      if (sh < 2) break;
       var sl = document.createElement('canvas');
       sl.width = canvas.width; sl.height = sh;
       sl.getContext('2d').drawImage(canvas, 0, sy, canvas.width, sh, 0, 0, canvas.width, sh);
-      var slH = sh * razao;
-      pdf.addImage(sl.toDataURL('image/jpeg',0.93),'JPEG', marg, pg===0 ? startY : 20, pw, slH);
-      rodapePortrait();
+      pdf.addImage(sl.toDataURL('image/jpeg',0.93),'JPEG', marg, pg===0?startY:20, pw, sh*razao);
+      rodape();
       yOff += altUtil; pg++;
     }
   }
 
-  // ── PÁGINA 1: Resumo Geral (apenas os cards) ──
+  // ── PÁG 1: Resumo Geral ──
   headerPortrait('Resumo Geral');
-
-  // Capturar só os cards e os grupos (sem gráficos e sem ranking)
-  var cardsEl = document.querySelector('.cards-grid');
-  var gruposEl = document.getElementById('resumo-grupos') ||
-                 document.querySelector('[id^="eg-"]') && document.querySelector('.cards-grid');
-
-  // Criar div com resumo completo
-  var divResumo = document.createElement('div');
-  divResumo.style.cssText = 'background:#f5f0e8;padding:0;';
-
-  // Clonar título + cards gerais + grupos engorda/recria
   var secDash = document.getElementById('secao-dashboard');
-  var filhos = secDash ? secDash.children : [];
-  for (var fi = 0; fi < filhos.length; fi++) {
-    var filho = filhos[fi];
-    // Parar antes dos gráficos
-    if (filho.classList && filho.classList.contains('charts-grid')) break;
-    if (filho.querySelector && filho.querySelector('.charts-grid')) break;
-    // Pular botão de backup e alertas
-    var txt = filho.textContent || '';
-    if (txt.indexOf('Exportar Backup') >= 0) continue;
-    divResumo.appendChild(filho.cloneNode(true));
-  }
-  document.body.appendChild(divResumo);
-
-  var c1 = await html2canvas(divResumo, {
-    scale: 2, backgroundColor: '#f5f0e8', useCORS: true,
-    width: 1000, windowWidth: 1000, logging: false
+  var divRes = document.createElement('div');
+  divRes.style.cssText = 'width:1100px;background:#f5f0e8;padding:16px;box-sizing:border-box;font-family:Arial,sans-serif;position:fixed;top:-9999px;left:0;z-index:-1;';
+  var filhos = secDash ? Array.from(secDash.children) : [];
+  filhos.forEach(function(f) {
+    var txt = f.textContent || '';
+    if (txt.indexOf('Exportar Backup') >= 0) return;
+    if (txt.indexOf('Alertas') >= 0 && f.tagName !== 'DIV') return;
+    // Parar nos gráficos
+    if (f.classList && f.classList.contains('charts-grid')) return;
+    // Pular seção de alertas
+    if (f.id === 'secao-alertas-resumo') return;
+    if (f.textContent.trim() === '🚨 Alertas') return;
+    var sectionTitle = f.querySelector && f.querySelector('.section-title');
+    if (f.classList && f.classList.contains('section-title') && f.textContent.indexOf('Alertas') >= 0) return;
+    divRes.appendChild(f.cloneNode(true));
   });
-  document.body.removeChild(divResumo);
+  document.body.appendChild(divRes);
+  await new Promise(function(r){setTimeout(r,300);});
+  var c1 = await html2canvas(divRes, {scale:2, backgroundColor:'#f5f0e8', useCORS:true, width:1100, windowWidth:1100, logging:false});
+  document.body.removeChild(divRes);
   colocarCanvas(c1, 20, 'Resumo Geral');
 
-  // ── PÁGINA 2: Histórico & Distribuição (gráficos) ──
+  // ── PÁG 2: Histórico & Distribuição ──
   pdf.addPage(); headerPortrait('Histórico & Distribuição');
   var chartsEl = document.querySelector('.charts-grid');
   if (chartsEl) {
-    var c2 = await html2canvas(chartsEl, {
-      scale: 2, backgroundColor: '#ffffff', useCORS: true,
-      width: 1000, windowWidth: 1000, logging: false
-    });
+    var divHist = document.createElement('div');
+    divHist.style.cssText = 'width:1100px;background:#ffffff;padding:16px;box-sizing:border-box;position:fixed;top:-9999px;left:0;z-index:-1;';
+    divHist.appendChild(chartsEl.cloneNode(true));
+    document.body.appendChild(divHist);
+    await new Promise(function(r){setTimeout(r,400);});
+    var c2 = await html2canvas(divHist, {scale:2, backgroundColor:'#ffffff', useCORS:true, width:1100, windowWidth:1100, logging:false});
+    document.body.removeChild(divHist);
     colocarCanvas(c2, 20, 'Histórico & Distribuição');
   }
 
-  // ── PÁGINA 3: Ranking ──
+  // ── PÁG 3: Ranking ──
   pdf.addPage(); headerPortrait('Ranking de Currais');
-  // Capturar as 3 colunas do ranking
-  var rankCards = document.querySelectorAll('.chart-card');
-  var rankDiv = null;
-  // Procurar o container do ranking
-  var rankContainers = ['ranking-ciclos','ranking-limpeza','ranking-vazio'];
-  var r0 = document.getElementById(rankContainers[0]);
-  if (r0) {
-    rankDiv = r0.closest('.charts-grid') || r0.parentElement.parentElement;
+  var r0 = document.getElementById('ranking-ciclos');
+  var rankEl = r0 ? r0.closest('.charts-grid') : null;
+  if (!rankEl) {
+    var titulosEl = Array.from(document.querySelectorAll('.section-title'));
+    var tRank = titulosEl.find(function(e){return e.textContent.indexOf('Ranking')>=0;});
+    if (tRank) rankEl = tRank.nextElementSibling;
   }
-  if (!rankDiv) {
-    // fallback: pegar seção inteira do ranking
-    var tituloRank = Array.from(document.querySelectorAll('.section-title')).find(function(el){return el.textContent.indexOf('Ranking')>=0;});
-    if (tituloRank) rankDiv = tituloRank.nextElementSibling;
-  }
-  if (rankDiv) {
-    var c3 = await html2canvas(rankDiv, {
-      scale: 2, backgroundColor: '#ffffff', useCORS: true,
-      width: 1000, windowWidth: 1000, logging: false
-    });
+  if (rankEl) {
+    var divRank = document.createElement('div');
+    divRank.style.cssText = 'width:1100px;background:#ffffff;padding:16px;box-sizing:border-box;position:fixed;top:-9999px;left:0;z-index:-1;';
+    divRank.appendChild(rankEl.cloneNode(true));
+    document.body.appendChild(divRank);
+    await new Promise(function(r){setTimeout(r,300);});
+    var c3 = await html2canvas(divRank, {scale:2, backgroundColor:'#ffffff', useCORS:true, width:1100, windowWidth:1100, logging:false});
+    document.body.removeChild(divRank);
     colocarCanvas(c3, 20, 'Ranking de Currais');
   }
 
-  // ── PÁGINAS 4+: Mapa por confinamento — LANDSCAPE, um por página ──
+  // ── PÁGS 4+: Mapa por confinamento — LANDSCAPE ──
   for (var ci = 0; ci < CONFS.length; ci++) {
     var conf = CONFS[ci];
     pdf.addPage({orientation:'landscape', format:'a4'});
     var WL = 297, HL = 210;
 
-    // Header landscape
+    // Header
     pdf.setFillColor(60, 30, 15);
-    pdf.rect(0, 0, WL, 16, 'F');
+    pdf.rect(0, 0, WL, 14, 'F');
     pdf.setTextColor(255,255,255);
-    pdf.setFontSize(12); pdf.setFont('helvetica','bold');
-    pdf.text('CURRAL FLUX — ' + conf.nome.toUpperCase(), 10, 11);
+    pdf.setFontSize(11); pdf.setFont('helvetica','bold');
+    pdf.text('CURRAL FLUX — ' + conf.nome.toUpperCase(), 8, 10);
     pdf.setFontSize(8); pdf.setFont('helvetica','normal');
-    pdf.text('Grupo Agroparanã — Mapa de Ocupação', WL-10, 11, {align:'right'});
+    pdf.text('Grupo Agroparanã — Mapa de Ocupação', WL-8, 10, {align:'right'});
 
-    // Montar grid do confinamento
+    // Calcular tamanho do grid para definir escala ideal
+    var maxCols = 0;
+    conf.rows.forEach(function(r){ if(r.n > maxCols) maxCols = r.n; });
+    var numLinhas = conf.rows.length;
+
+    // Área disponível na página (mm)
+    var areaW = WL - 16; // margem 8 de cada lado
+    var areaH = HL - 20 - 14; // 14 header + 6 rodapé + 14 legenda + margem
+
+    // Calcular escala: cada célula = 38px wide + 5gap + 30 label
+    // Total width pixels = 30 (label) + maxCols*43
+    var pixW = 30 + maxCols * 43;
+    var pixH = numLinhas * 31;
+
+    // Escala para caber na área
+    var escalaW = (areaW / pixW) * 3.78; // converter mm para px (96dpi ~= 3.78px/mm)
+    var escalaH = (areaH / pixH) * 3.78;
+    var escala = Math.min(escalaW, escalaH, 2.8);
+
     var tempDiv = document.createElement('div');
-    tempDiv.style.cssText = 'position:fixed;top:0;left:0;background:#ffffff;padding:24px 30px;z-index:9999;width:1400px;box-sizing:border-box;';
+    var totalW = Math.ceil((pixW * escala) / 3.78 * 10 + 60); // em px para o container
+    tempDiv.style.cssText = 'position:fixed;top:0;left:0;background:#ffffff;padding:16px;z-index:9999;box-sizing:border-box;width:' + (pixW * escala + 60) + 'px;';
 
-    // Stats do confinamento
-    var todos2 = conf.rows.reduce(function(acc,r){
-      for(var j=1;j<=r.n;j++) acc.push(gId(conf,r,j)); return acc;
-    },[]);
+    // Stats
+    var todos2 = [];
+    conf.rows.forEach(function(r){ for(var j=1;j<=r.n;j++) todos2.push(gId(conf,r,j)); });
     var ocup2 = todos2.filter(function(id){return BD[id]&&BD[id].status==='ocupada';}).length;
     var limp2 = todos2.filter(function(id){return BD[id]&&['limpeza','transporte','cascalho','reparacao'].includes(BD[id].status);}).length;
+    var emb2  = todos2.filter(function(id){return BD[id]&&BD[id].status==='embarcada';}).length;
     var liv2  = todos2.filter(function(id){return BD[id]&&BD[id].status==='liberada';}).length;
 
     var statsDiv = document.createElement('div');
-    statsDiv.style.cssText = 'display:flex;gap:16px;margin-bottom:20px;font-family:Arial,sans-serif;align-items:center;';
-    statsDiv.innerHTML = '<span style="font-size:22px;font-weight:900;color:#000;">' + conf.nome + '</span>' +
-      '<span style="background:#eee;border-radius:8px;padding:4px 12px;font-size:14px;font-weight:600;">' + todos2.length + ' currais</span>' +
-      '<span style="background:#F44336;color:#fff;border-radius:8px;padding:4px 12px;font-size:14px;font-weight:600;">' + ocup2 + ' ocupadas</span>' +
-      (limp2>0?'<span style="background:#2196F3;color:#fff;border-radius:8px;padding:4px 12px;font-size:14px;font-weight:600;">' + limp2 + ' em limpeza</span>':'')+
-      (liv2>0?'<span style="background:#4CAF50;color:#fff;border-radius:8px;padding:4px 12px;font-size:14px;font-weight:600;">' + liv2 + ' livres</span>':'');
+    statsDiv.style.cssText = 'display:flex;gap:10px;margin-bottom:14px;font-family:Arial,sans-serif;align-items:center;flex-wrap:wrap;';
+    var badges = '<span style="font-size:18px;font-weight:900;color:#000;margin-right:4px;">' + conf.nome + '</span>' +
+      '<span style="background:#eee;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;">' + todos2.length + ' currais</span>' +
+      '<span style="background:#F44336;color:#fff;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;">' + ocup2 + ' ocupadas</span>';
+    if (emb2>0) badges += '<span style="background:#FF9800;color:#fff;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;">' + emb2 + ' embarcadas</span>';
+    if (limp2>0) badges += '<span style="background:#2196F3;color:#fff;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;">' + limp2 + ' em limpeza</span>';
+    if (liv2>0)  badges += '<span style="background:#4CAF50;color:#fff;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;">' + liv2 + ' livres</span>';
+    statsDiv.innerHTML = badges;
     tempDiv.appendChild(statsDiv);
 
-    var gridWrap = document.createElement('div');
-    gridWrap.style.cssText = 'transform:scale(2.4);transform-origin:top left;margin-bottom:0;';
+    // Grid sem transform — células com tamanho calculado
+    var celW = Math.round(escala * 38);
+    var celH = Math.round(escala * 26);
+    var gapC = Math.round(escala * 5);
+    var lblW = Math.round(escala * 30);
+    var fSz  = Math.max(9, Math.round(escala * 10));
+
     var g = document.createElement('div');
-    g.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
+    g.style.cssText = 'display:flex;flex-direction:column;gap:' + gapC + 'px;';
 
     conf.rows.forEach(function(r) {
       var ns = [];
       if (r.dir==='ltr'){for(var j=1;j<=r.n;j++)ns.push(j);}
       else{for(var j=r.n;j>=1;j--)ns.push(j);}
       var row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:5px;';
+      row.style.cssText = 'display:flex;align-items:center;gap:' + gapC + 'px;';
       var lbl = document.createElement('div');
-      lbl.style.cssText = 'font-size:12px;font-weight:bold;color:#444;width:30px;text-align:right;flex-shrink:0;font-family:Arial;';
+      lbl.style.cssText = 'font-size:' + fSz + 'px;font-weight:bold;color:#444;width:' + lblW + 'px;text-align:right;flex-shrink:0;font-family:Arial;';
       lbl.textContent = r.l;
       row.appendChild(lbl);
       ns.forEach(function(n){
         var id = gId(conf,r,n);
         var b = BD[id]; var st = b?b.status:'liberada';
         var cor = COR[st]||'#ccc';
-        var el2 = document.createElement('div');
-        el2.style.cssText = 'width:38px;height:26px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:bold;flex-shrink:0;background:'+cor+';font-family:Arial;';
-        el2.textContent = n;
-        row.appendChild(el2);
+        var cel = document.createElement('div');
+        cel.style.cssText = 'width:' + celW + 'px;height:' + celH + 'px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:' + fSz + 'px;color:#fff;font-weight:bold;flex-shrink:0;background:' + cor + ';font-family:Arial;';
+        cel.textContent = n;
+        row.appendChild(cel);
       });
       g.appendChild(row);
     });
-
-    gridWrap.appendChild(g);
-    tempDiv.appendChild(gridWrap);
-
-    // Spacer para o grid escalado
-    var numLinhas = conf.rows.length;
-    var altGrid = numLinhas * 31 * 2.4;
-    var sp = document.createElement('div');
-    sp.style.cssText = 'height:' + altGrid + 'px;';
-    tempDiv.appendChild(sp);
+    tempDiv.appendChild(g);
 
     // Legenda
     var leg = document.createElement('div');
-    leg.style.cssText = 'display:flex;flex-wrap:wrap;gap:12px 28px;font-family:Arial;font-size:18px;border-top:2px solid #eee;padding-top:16px;margin-top:8px;';
+    leg.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px 20px;font-family:Arial;font-size:11px;border-top:1.5px solid #eee;padding-top:10px;margin-top:12px;';
     Object.entries(COR).forEach(function(entry){
       var st=entry[0],cor=entry[1];
       var item=document.createElement('div');
-      item.style.cssText='display:flex;align-items:center;gap:8px;';
-      item.innerHTML='<div style="width:24px;height:24px;border-radius:4px;background:'+cor+';flex-shrink:0;"></div><span style="color:#333;font-weight:500;">'+(LABELS[st]||st)+'</span>';
+      item.style.cssText='display:flex;align-items:center;gap:6px;';
+      item.innerHTML='<div style="width:14px;height:14px;border-radius:3px;background:'+cor+';flex-shrink:0;"></div><span style="color:#333;font-weight:500;">'+(LABELS[st]||st)+'</span>';
       leg.appendChild(item);
     });
     tempDiv.appendChild(leg);
 
     document.body.appendChild(tempDiv);
-    await new Promise(function(r){setTimeout(r,500);});
+    await new Promise(function(r){setTimeout(r,400);});
 
-    var cv = await html2canvas(tempDiv,{scale:1.5,backgroundColor:'#ffffff',width:1400,logging:false});
+    var cv = await html2canvas(tempDiv, {
+      scale: 2,
+      backgroundColor:'#ffffff',
+      useCORS: true,
+      logging: false
+    });
     document.body.removeChild(tempDiv);
 
-    var imgW = WL-20;
-    var imgH = (cv.height/cv.width)*imgW;
-    var maxH = HL-22;
-    if (imgH > maxH) {
-      imgW = (cv.width/cv.height)*maxH;
-      imgH = maxH;
-    }
-    var xOff = (WL-imgW)/2;
-    pdf.addImage(cv.toDataURL('image/jpeg',0.93),'JPEG',xOff,20,imgW,imgH);
-    pdf.setFontSize(7); pdf.setTextColor(150,150,150);
-    pdf.text('Gerado em: ' + hoje, WL-10, HL-3, {align:'right'});
+    // Calcular tamanho final para caber em landscape
+    var imgMaxW = WL - 16;
+    var imgMaxH = HL - 20;
+    var razaoW = imgMaxW / (cv.width / 2); // /2 por causa do scale:2
+    var razaoH = imgMaxH / (cv.height / 2);
+    var razaoFinal = Math.min(razaoW, razaoH);
+    var imgW = (cv.width / 2) * razaoFinal;
+    var imgH = (cv.height / 2) * razaoFinal;
+    var xOff = (WL - imgW) / 2;
+
+    pdf.addImage(cv.toDataURL('image/jpeg',0.94),'JPEG', xOff, 16, imgW, imgH);
+    rodape(WL, HL);
   }
 
   pdf.save('CurralFlux_Completo_' + dataArq + '.pdf');
