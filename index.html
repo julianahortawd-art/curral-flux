@@ -2953,111 +2953,148 @@ async function gerarPDFCompleto() {
   var pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   var WP = 210, HP = 297;
 
-  // ── Helpers ──
   function hexToRgb(hex) {
-    var r = parseInt(hex.slice(1,3),16);
-    var g = parseInt(hex.slice(3,5),16);
-    var b = parseInt(hex.slice(5,7),16);
-    return [r,g,b];
+    return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
   }
-
-  function headerPortrait(titulo) {
+  function headerP(titulo) {
     pdf.setFillColor(60,30,15); pdf.rect(0,0,WP,14,'F');
-    pdf.setTextColor(255,255,255);
-    pdf.setFontSize(11); pdf.setFont('helvetica','bold');
+    pdf.setTextColor(255,255,255); pdf.setFontSize(11); pdf.setFont('helvetica','bold');
     pdf.text('CURRAL FLUX', 8, 10);
     pdf.setFontSize(8); pdf.setFont('helvetica','normal');
     pdf.text('Grupo Agroparanã — ' + titulo, WP-8, 10, {align:'right'});
   }
-
-  function rodapePortrait() {
+  function rodape(w,h) {
     pdf.setFontSize(7); pdf.setTextColor(150,150,150);
-    pdf.text('Gerado em: ' + hoje, WP-8, HP-4, {align:'right'});
+    pdf.text('Gerado em: ' + hoje, (w||WP)-8, (h||HP)-4, {align:'right'});
   }
 
-  function colocarCanvas(canvas, startY, titulo) {
-    var marg = 10;
-    var pw = WP - marg*2;
-    var razao = pw / canvas.width;
-    var altTotal = canvas.height * razao;
-    var altUtil = HP - startY - 10;
-    var yOff = 0; var pg = 0;
-    while (yOff < altTotal - 1) {
-      if (pg > 0) { pdf.addPage(); headerPortrait(titulo); startY = 18; altUtil = HP - 28; }
-      var f0 = yOff / altTotal;
-      var f1 = Math.min((yOff + altUtil) / altTotal, 1);
-      var sy = Math.round(f0 * canvas.height);
-      var sh = Math.round((f1-f0) * canvas.height);
-      if (sh < 2) break;
-      var sl = document.createElement('canvas');
-      sl.width = canvas.width; sl.height = sh;
-      sl.getContext('2d').drawImage(canvas, 0, sy, canvas.width, sh, 0, 0, canvas.width, sh);
-      pdf.addImage(sl.toDataURL('image/jpeg',0.93),'JPEG', marg, pg===0?startY:18, pw, sh*razao);
-      rodapePortrait();
-      yOff += altUtil; pg++;
-    }
-  }
-
-  // ── PÁG 1: Resumo Geral ──
-  headerPortrait('Resumo Geral');
-  var secDash = document.getElementById('secao-dashboard');
-  var divRes = document.createElement('div');
-  divRes.style.cssText = 'width:1100px;background:#f5f0e8;padding:16px;box-sizing:border-box;font-family:Arial,sans-serif;position:fixed;top:-9999px;left:0;z-index:-1;';
-  Array.from(secDash.children).forEach(function(f) {
-    if ((f.textContent||'').indexOf('Exportar Backup') >= 0) return;
-    if (f.id === 'secao-alertas-resumo') return;
-    if (f.classList && f.classList.contains('section-title') && (f.textContent||'').indexOf('Alertas') >= 0) return;
-    if (f.classList && f.classList.contains('charts-grid')) return;
-    if (f.classList && f.classList.contains('section-title') && (f.textContent||'').indexOf('Histórico') >= 0) return;
-    if (f.classList && f.classList.contains('section-title') && (f.textContent||'').indexOf('Ranking') >= 0) return;
-    divRes.appendChild(f.cloneNode(true));
-  });
-  document.body.appendChild(divRes);
-  await new Promise(function(r){setTimeout(r,300);});
-  var c1 = await html2canvas(divRes,{scale:2,backgroundColor:'#f5f0e8',useCORS:true,width:1100,windowWidth:1100,logging:false});
-  document.body.removeChild(divRes);
-  colocarCanvas(c1, 17, 'Resumo Geral');
-
-  // ── PÁG 2: Histórico ──
-  pdf.addPage(); headerPortrait('Histórico & Distribuição');
-  var chartsEl = document.querySelector('.charts-grid');
-  if (chartsEl) {
-    var divH = document.createElement('div');
-    divH.style.cssText = 'width:1100px;background:#fff;padding:16px;box-sizing:border-box;position:fixed;top:-9999px;left:0;z-index:-1;';
-    divH.appendChild(chartsEl.cloneNode(true));
-    document.body.appendChild(divH);
-    await new Promise(function(r){setTimeout(r,500);});
-    var c2 = await html2canvas(divH,{scale:2,backgroundColor:'#fff',useCORS:true,width:1100,windowWidth:1100,logging:false});
-    document.body.removeChild(divH);
-    colocarCanvas(c2, 17, 'Histórico & Distribuição');
-  }
-
-  // ── PÁG 3: Ranking ──
-  pdf.addPage(); headerPortrait('Ranking de Currais');
-  var r0 = document.getElementById('ranking-ciclos');
-  var rankEl = r0 ? (r0.closest('.charts-grid') || r0.parentElement.parentElement) : null;
-  if (rankEl) {
-    var divR = document.createElement('div');
-    divR.style.cssText = 'width:1100px;background:#fff;padding:16px;box-sizing:border-box;position:fixed;top:-9999px;left:0;z-index:-1;';
-    divR.appendChild(rankEl.cloneNode(true));
-    document.body.appendChild(divR);
-    await new Promise(function(r){setTimeout(r,300);});
-    var c3 = await html2canvas(divR,{scale:2,backgroundColor:'#fff',useCORS:true,width:1100,windowWidth:1100,logging:false});
-    document.body.removeChild(divR);
-    colocarCanvas(c3, 17, 'Ranking de Currais');
-  }
-
-  // ── PÁGS 4+: Mapa vetorial por confinamento ──
   var COR_PDF = {
-    ocupada:   '#F44336', embarcada: '#FF9800', limpeza:   '#2196F3',
-    transporte:'#AB47BC', cascalho:  '#795548', reparacao: '#FFC107',
-    liberada:  '#4CAF50'
+    ocupada:'#F44336', embarcada:'#FF9800', limpeza:'#2196F3',
+    transporte:'#AB47BC', cascalho:'#795548', reparacao:'#FFC107', liberada:'#4CAF50'
   };
-  var LABELS_PDF = {
+  var LBL_PDF = {
     ocupada:'Ocupada', embarcada:'Embarcada', limpeza:'Limpeza iniciada',
     transporte:'Em transporte', cascalho:'Cascalho', reparacao:'Reparação infra', liberada:'Liberada'
   };
 
+  // ══════════════════════════════════
+  // PÁG 1 — RESUMO GERAL (vetorial)
+  // ══════════════════════════════════
+  headerP('Resumo Geral');
+  var y = 20;
+  var todos = Object.values(BD);
+  var ENGORDA = ['Confinamento 1','Confinamento 2','Remanga'];
+  var RECRIA  = ['Confinamento 3','Sequestro'];
+
+  function cardResumo(label, valor, cor, x, y2, w) {
+    pdf.setFillColor(255,255,255); pdf.roundedRect(x, y2, w, 22, 2, 2, 'F');
+    pdf.setDrawColor(220,210,195); pdf.roundedRect(x, y2, w, 22, 2, 2, 'S');
+    var rgb = hexToRgb(cor);
+    pdf.setFontSize(16); pdf.setFont('helvetica','bold'); pdf.setTextColor(rgb[0],rgb[1],rgb[2]);
+    pdf.text(String(valor), x+w/2, y2+12, {align:'center'});
+    pdf.setFontSize(7); pdf.setFont('helvetica','normal'); pdf.setTextColor(120,120,120);
+    pdf.text(label, x+w/2, y2+19, {align:'center'});
+  }
+
+  function blocoResumo(titulo, grupo, corTitulo, y0) {
+    pdf.setFontSize(9); pdf.setFont('helvetica','bold'); pdf.setTextColor(corTitulo[0],corTitulo[1],corTitulo[2]);
+    pdf.text(titulo, 10, y0); y0 += 3;
+    var bw = (WP-20)/6; var bx = 10;
+    var oc = grupo.filter(function(b){return b.status==='ocupada';}).length;
+    var li = grupo.filter(function(b){return b.status==='liberada';}).length;
+    var lp = grupo.filter(function(b){return ['limpeza','transporte','cascalho','reparacao'].includes(b.status);}).length;
+    var em = grupo.filter(function(b){return b.status==='embarcada';}).length;
+    var tx = grupo.length>0?Math.round((oc+em)/grupo.length*100):0;
+    cardResumo('Total', grupo.length, '#333333', bx, y0, bw); bx+=bw+1;
+    cardResumo('Ocupadas', oc, '#F44336', bx, y0, bw); bx+=bw+1;
+    cardResumo('Disponíveis', li, '#4CAF50', bx, y0, bw); bx+=bw+1;
+    cardResumo('Em limpeza', lp, '#2196F3', bx, y0, bw); bx+=bw+1;
+    cardResumo('Embarcadas', em, '#FF9800', bx, y0, bw); bx+=bw+1;
+    cardResumo('Tx. Ocupação', tx+'%', corTitulo[3]||'#C08332', bx, y0, bw);
+    return y0 + 26;
+  }
+
+  // Resumo geral
+  pdf.setFontSize(9); pdf.setFont('helvetica','bold'); pdf.setTextColor(60,30,15);
+  pdf.text('📊 Resumo Geral', 10, y); y += 3;
+  var bw0 = (WP-20)/5; var bx0 = 10;
+  var oc0=todos.filter(function(b){return b.status==='ocupada';}).length;
+  var li0=todos.filter(function(b){return b.status==='liberada';}).length;
+  var lp0=todos.filter(function(b){return ['limpeza','transporte','cascalho','reparacao'].includes(b.status);}).length;
+  var em0=todos.filter(function(b){return b.status==='embarcada';}).length;
+  cardResumo('Total Currais', todos.length, '#333', bx0, y, bw0); bx0+=bw0+1;
+  cardResumo('Ocupadas', oc0, '#F44336', bx0, y, bw0); bx0+=bw0+1;
+  cardResumo('Disponíveis', li0, '#4CAF50', bx0, y, bw0); bx0+=bw0+1;
+  cardResumo('Em limpeza', lp0, '#2196F3', bx0, y, bw0); bx0+=bw0+1;
+  cardResumo('Embarcadas', em0, '#FF9800', bx0, y, bw0);
+  y += 28;
+
+  var eng = todos.filter(function(b){return ENGORDA.includes(b.confinamento);});
+  var rec = todos.filter(function(b){return RECRIA.includes(b.confinamento);});
+  y = blocoResumo('🐂 Engorda (Confinamento 1, 2 e Remanga)', eng, [140,77,46,'#C08332'], y);
+  y += 2;
+  y = blocoResumo('🌱 Recria Confinada (Confinamento 3 e Sequestro)', rec, [104,98,48,'#686230'], y);
+  y += 6;
+
+  // Distribuição por status (barras horizontais)
+  pdf.setFontSize(8); pdf.setFont('helvetica','bold'); pdf.setTextColor(60,30,15);
+  pdf.text('Distribuição atual por status', 10, y); y += 5;
+  Object.entries(COR_PDF).forEach(function(e) {
+    var st=e[0], cor=e[1];
+    var cnt = todos.filter(function(b){return b.status===st;}).length;
+    if (cnt === 0) return;
+    var pct = todos.length>0?(cnt/todos.length):0;
+    var rgb = hexToRgb(cor);
+    pdf.setFillColor(rgb[0],rgb[1],rgb[2]);
+    pdf.rect(10, y, pct*(WP-50), 5, 'F');
+    pdf.setFontSize(7); pdf.setFont('helvetica','normal'); pdf.setTextColor(60,60,60);
+    pdf.text((LBL_PDF[st]||st) + ': ' + cnt, 10+(WP-50)+2, y+4);
+    y += 7;
+  });
+
+  rodape();
+
+  // ══════════════════════════════════
+  // PÁG 2 — RANKING (vetorial)
+  // ══════════════════════════════════
+  pdf.addPage(); headerP('Ranking de Currais');
+  y = 20;
+
+  // Ranking por ciclos
+  var ciclosPorBaia = {};
+  CICLOS_DATA.forEach(function(c) {
+    if (!ciclosPorBaia[c.ID_Baia]) ciclosPorBaia[c.ID_Baia] = 0;
+    ciclosPorBaia[c.ID_Baia]++;
+  });
+  var rankCiclos = Object.entries(ciclosPorBaia)
+    .sort(function(a,b){return b[1]-a[1];})
+    .slice(0,20);
+
+  pdf.setFontSize(9); pdf.setFont('helvetica','bold'); pdf.setTextColor(60,30,15);
+  pdf.text('🏆 Mais ciclos completos', 10, y); y+=6;
+
+  var maxCic = rankCiclos.length>0?rankCiclos[0][1]:1;
+  rankCiclos.forEach(function(e, i) {
+    var id=e[0], cnt=e[1];
+    var b = BD[id]||{};
+    var nome = b.nome||id;
+    var barW = (cnt/maxCic)*(WP-60);
+    pdf.setFillColor(192,131,50); pdf.rect(10, y, barW, 4, 'F');
+    pdf.setFontSize(7); pdf.setFont('helvetica','normal'); pdf.setTextColor(50,50,50);
+    pdf.text((i+1)+'. '+nome, 10, y-1);
+    pdf.setTextColor(192,131,50); pdf.setFont('helvetica','bold');
+    pdf.text(cnt+' ciclo'+(cnt>1?'s':''), WP-8, y+3, {align:'right'});
+    pdf.setTextColor(100,100,100); pdf.setFont('helvetica','normal');
+    pdf.text(b.confinamento||'', WP-8, y-1, {align:'right'});
+    y += 10;
+    if (y > HP-20) { pdf.addPage(); headerP('Ranking de Currais'); y=20; }
+  });
+
+  rodape();
+
+  // ══════════════════════════════════
+  // PÁGS 3+: MAPA VETORIAL
+  // ══════════════════════════════════
   for (var ci = 0; ci < CONFS.length; ci++) {
     var conf = CONFS[ci];
     pdf.addPage({orientation:'landscape', format:'a4'});
@@ -3065,116 +3102,90 @@ async function gerarPDFCompleto() {
 
     // Header
     pdf.setFillColor(60,30,15); pdf.rect(0,0,WL,14,'F');
-    pdf.setTextColor(255,255,255);
-    pdf.setFontSize(11); pdf.setFont('helvetica','bold');
+    pdf.setTextColor(255,255,255); pdf.setFontSize(11); pdf.setFont('helvetica','bold');
     pdf.text('CURRAL FLUX — ' + conf.nome.toUpperCase(), 8, 10);
     pdf.setFontSize(8); pdf.setFont('helvetica','normal');
     pdf.text('Grupo Agroparanã — Mapa de Ocupação', WL-8, 10, {align:'right'});
 
-    // Stats das baias
+    // Stats
     var todos2 = [];
     conf.rows.forEach(function(r){ for(var j=1;j<=r.n;j++) todos2.push(gId(conf,r,j)); });
-    var counts = {};
+    var counts2 = {};
     todos2.forEach(function(id){
-      var st = (BD[id]&&BD[id].status)||'liberada';
-      counts[st] = (counts[st]||0)+1;
+      var st=(BD[id]&&BD[id].status)||'liberada';
+      counts2[st]=(counts2[st]||0)+1;
     });
 
-    // Badges de status no topo
-    var bx = 8; var by = 20;
-    pdf.setFontSize(12); pdf.setFont('helvetica','bold'); pdf.setTextColor(20,20,20);
-    pdf.text(conf.nome, bx, by); bx += pdf.getTextWidth(conf.nome) + 4;
-    pdf.setFontSize(8); pdf.setFont('helvetica','normal');
-    var badgeData = [
-      {label: todos2.length + ' currais', bg:[220,220,220], fg:[50,50,50]},
-    ];
-    Object.entries(counts).forEach(function(e){
-      var st=e[0], cnt=e[1];
-      var rgb = hexToRgb(COR_PDF[st]||'#999');
-      badgeData.push({label: cnt + ' ' + (LABELS_PDF[st]||st).toLowerCase(), bg:rgb, fg:[255,255,255]});
+    // Badges no topo
+    var bx = 8; var by = 21;
+    pdf.setFontSize(11); pdf.setFont('helvetica','bold'); pdf.setTextColor(20,20,20);
+    pdf.text(conf.nome, bx, by); bx += pdf.getTextWidth(conf.nome)+4;
+    pdf.setFontSize(7); pdf.setFont('helvetica','normal');
+    var badges = [{label:todos2.length+' currais',bg:[220,220,220],fg:[50,50,50]}];
+    Object.entries(counts2).forEach(function(e){
+      var rgb=hexToRgb(COR_PDF[e[0]]||'#999');
+      badges.push({label:e[1]+' '+(LBL_PDF[e[0]]||e[0]).toLowerCase(),bg:rgb,fg:[255,255,255]});
     });
-    badgeData.forEach(function(b){
-      var tw = pdf.getTextWidth(b.label);
-      var bw = tw + 4;
+    badges.forEach(function(b){
+      var tw=pdf.getTextWidth(b.label)+4;
       pdf.setFillColor(b.bg[0],b.bg[1],b.bg[2]);
-      pdf.roundedRect(bx, by-5, bw, 6, 1, 1, 'F');
+      pdf.roundedRect(bx,by-5,tw,6,1,1,'F');
       pdf.setTextColor(b.fg[0],b.fg[1],b.fg[2]);
-      pdf.text(b.label, bx+2, by);
-      bx += bw + 3;
+      pdf.text(b.label,bx+2,by); bx+=tw+3;
     });
 
-    // Calcular dimensões do grid
-    var maxCols = 0;
-    conf.rows.forEach(function(r){ if(r.n>maxCols) maxCols=r.n; });
-    var numLinhas = conf.rows.length;
+    // Calcular grid
+    var maxCols=0;
+    conf.rows.forEach(function(r){if(r.n>maxCols)maxCols=r.n;});
+    var numL=conf.rows.length;
+    var margL=8, margT=26, margB=16;
+    var areaW=WL-margL*2, areaH=HL-margT-margB;
+    var lblW=10, gap=1.5;
+    var celW=Math.min((areaW-lblW-(maxCols+1)*gap)/maxCols, 20);
+    var celH=Math.min((areaH-(numL+1)*gap)/numL, 13);
+    var fSz=Math.max(5,Math.min(celH*0.6,celW*0.5,9));
+    var gridW=lblW+gap+(celW+gap)*maxCols;
+    var gridH=(celH+gap)*numL;
+    var gx=margL+(areaW-gridW)/2;
+    var gy=margT+(areaH-gridH)/2;
 
-    var margL = 8, margT = 24, margB = 22; // rodapé legenda
-    var areaW = WL - margL*2;
-    var areaH = HL - margT - margB;
-
-    var lblW = 8; // largura da label da linha
-    var gap = 1;
-    // Calcular tamanho de célula que cabe
-    var celW = (areaW - lblW - gap*(maxCols)) / maxCols;
-    var celH = (areaH - gap*(numLinhas-1)) / numLinhas;
-    celW = Math.min(celW, 18);
-    celH = Math.min(celH, 12);
-    var fSz = Math.max(5, Math.min(celH*0.55, celW*0.45, 8));
-
-    var gridW = lblW + gap + maxCols*(celW+gap) - gap;
-    var gridH = numLinhas*(celH+gap) - gap;
-    var startX = margL + (areaW - gridW)/2;
-    var startY2 = margT + (areaH - gridH)/2;
-
-    conf.rows.forEach(function(r, ri) {
-      var ns = [];
-      if(r.dir==='ltr'){for(var j=1;j<=r.n;j++)ns.push(j);}
-      else{for(var j=r.n;j>=1;j--)ns.push(j);}
-
-      var rowY = startY2 + ri*(celH+gap);
-
-      // Label da linha
-      pdf.setTextColor(80,80,80); pdf.setFontSize(fSz); pdf.setFont('helvetica','bold');
-      pdf.text(r.l, startX + lblW, rowY + celH*0.65, {align:'right'});
-
+    conf.rows.forEach(function(r,ri){
+      var ns=[];
+      for(var j=1;j<=r.n;j++) ns.push(j); // sempre ltr
+      var ry=gy+ri*(celH+gap);
+      // Label linha
+      pdf.setFontSize(fSz); pdf.setFont('helvetica','bold'); pdf.setTextColor(80,80,80);
+      pdf.text(r.l, gx+lblW, ry+celH*0.7, {align:'right'});
       // Células
-      ns.forEach(function(n, ni) {
-        var id = gId(conf,r,n);
-        var st = (BD[id]&&BD[id].status)||'liberada';
-        var cor = hexToRgb(COR_PDF[st]||'#cccccc');
-        var cx = startX + lblW + gap + ni*(celW+gap);
-        var cy = rowY;
-
-        pdf.setFillColor(cor[0],cor[1],cor[2]);
-        pdf.roundedRect(cx, cy, celW, celH, 1, 1, 'F');
-
-        // Número
+      ns.forEach(function(n,ni){
+        var id=gId(conf,r,n);
+        var st=(BD[id]&&BD[id].status)||'liberada';
+        var rgb=hexToRgb(COR_PDF[st]||'#cccccc');
+        var cx=gx+lblW+gap+ni*(celW+gap);
+        pdf.setFillColor(rgb[0],rgb[1],rgb[2]);
+        pdf.roundedRect(cx,ry,celW,celH,1,1,'F');
         pdf.setTextColor(255,255,255); pdf.setFontSize(fSz); pdf.setFont('helvetica','bold');
-        pdf.text(String(n), cx + celW/2, cy + celH*0.67, {align:'center'});
+        pdf.text(String(n),cx+celW/2,ry+celH*0.7,{align:'center'});
       });
     });
 
-    // Legenda no rodapé
-    var legY = HL - 14;
-    pdf.setDrawColor(200,200,200); pdf.line(8, legY-3, WL-8, legY-3);
-    var legX = 8;
+    // Legenda rodapé
+    var legY=HL-11;
+    pdf.setDrawColor(210,210,210); pdf.line(8,legY-2,WL-8,legY-2);
+    var legX=8;
     Object.entries(COR_PDF).forEach(function(e){
-      var st=e[0], cor=e[1];
-      var rgb = hexToRgb(cor);
+      var rgb=hexToRgb(e[1]);
       pdf.setFillColor(rgb[0],rgb[1],rgb[2]);
-      pdf.roundedRect(legX, legY, 5, 4, 0.5, 0.5, 'F');
+      pdf.roundedRect(legX,legY,4,4,0.5,0.5,'F');
       pdf.setTextColor(50,50,50); pdf.setFontSize(6); pdf.setFont('helvetica','normal');
-      var lbl = LABELS_PDF[st]||st;
-      pdf.text(lbl, legX+6, legY+3.2);
-      legX += 6 + pdf.getTextWidth(lbl) + 5;
+      var lbl=LBL_PDF[e[0]]||e[0];
+      pdf.text(lbl,legX+5,legY+3);
+      legX+=5+pdf.getTextWidth(lbl)+5;
     });
-
-    // Rodapé data
-    pdf.setFontSize(6); pdf.setTextColor(150,150,150);
-    pdf.text('Gerado em: ' + hoje, WL-8, HL-4, {align:'right'});
+    rodape(WL,HL);
   }
 
-  pdf.save('CurralFlux_Completo_' + dataArq + '.pdf');
+  pdf.save('CurralFlux_Completo_'+dataArq+'.pdf');
 }
 
 
