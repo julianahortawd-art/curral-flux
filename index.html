@@ -3079,21 +3079,15 @@ async function gerarPDFCompleto() {
   var altFaixa2 = areaH * 0.20; // Seq+Conf3
   var altFaixa3 = areaH * 0.08; // Rem
 
-  // Tamanho de célula: calculado para caber Conf2 (6 cols, 10 linhas) na faixa 1
-  // e Sequestro (14 cols, 2 linhas) na faixa 2
-  // Usa o menor para manter padrão
-  var CEL_F1 = Math.min(
-    (areaW * 0.63 - lblW - (12+1)*gap) / 12,  // Conf1 largura
-    (altFaixa1 - 7 - (10+1)*gap) / 10           // Conf2 altura (10 linhas)
+  // Célula calculada para caber TUDO na página
+  // Restrição horizontal faixa 2 (Seq 14 + Conf3 11 = 25 cols) é a mais restritiva
+  var CEL = Math.min(
+    (areaW - 2*lblW - 5 - 18*gap) / 18,  // faixa 1: 12+6 cols
+    (areaW - 2*lblW - 5 - 25*gap) / 25,  // faixa 2: 14+11 cols
+    (areaH - 21 - 8 - 13*gap) / 13        // vertical: 10+2+1 linhas
   );
-  var CEL_F2 = Math.min(
-    (areaW - lblW - (14+1)*gap) / 14,           // Seq largura  
-    (altFaixa2 - 7 - (2+1)*gap) / 2             // altura 2 linhas
-  );
-  // Célula padrão = menor dos dois para ser igual em todos
-  var CEL = Math.min(CEL_F1, CEL_F2);
   CEL = Math.floor(CEL * 10) / 10;
-  var FSZ = Math.max(5, Math.min(CEL * 0.65, 9));
+  var FSZ = Math.max(4.5, Math.min(CEL * 0.65, 8));
 
   function desenharConf(conf, sx, sy) {
     pdf.setFontSize(6.5); pdf.setFont('helvetica','bold'); pdf.setTextColor(40,40,40);
