@@ -3061,65 +3061,73 @@ async function gerarPDFCompleto() {
   var COR_PDF2 = COR_PDF;
   var LBL_PDF2 = LBL_PDF;
 
-  // Calcular quantas colunas e linhas no total para distribuir na página
-  // Vamos colocar os confinamentos em colunas lado a lado
-  // Layout: Conf1 | Conf2 | (Conf3+Seq+Rem empilhados)
-  var margL=6, margT=16, margB=14;
+  // Layout:
+  // [  Conf1 (12x8)  ] [ Conf2 (6x10) ] [ Sequestro (14x2)       ]
+  //                                      [ Conf3 (11x2) | Rem(4x1) ]
+  var margL=5, margT=16, margB=14, gap=1.2;
   var areaW=WL-margL*2;
   var areaH=HL-margT-margB;
 
-  // Calcular tamanho de célula baseado no maior confinamento
-  // Conf1: 12 cols x 8 linhas; Conf2: 6 cols x 10 linhas; Conf3: 11 cols x 2; Seq: 14 cols x 2; Rem: 4 cols x 1
-  // Dividir área em 3 seções horizontais: Conf1 | Conf2 | Conf3+Seq+Rem
-  var sec1W = areaW * 0.42; // Conf1 (12 colunas)
-  var sec2W = areaW * 0.23; // Conf2 (6 colunas)
-  var sec3W = areaW * 0.33; // Conf3 + Seq + Rem (14 colunas max)
+  // Tamanho de célula padrão — calculado para o maior confinamento (Conf1: 12 colunas, 8 linhas)
+  // Área esquerda = 65% para Conf1+Conf2, direita = 35% para Seq+Conf3+Rem
+  var lblW=7;
+  var areaEsq = areaW * 0.645;
+  var areaDir = areaW * 0.335;
 
-  function desenharConf(conf, sx, sy, sw, sh) {
-    var maxC=0;
-    conf.rows.forEach(function(r){if(r.n>maxC)maxC=r.n;});
-    var nL=conf.rows.length;
-    var lblW=8, gap=1;
-    var cW=Math.min((sw-lblW-(maxC+1)*gap)/maxC, 18);
-    var cH=Math.min((sh-(nL+1)*gap)/nL, 11);
-    cW=Math.max(cW,5); cH=Math.max(cH,4);
-    var fSz=Math.max(4,Math.min(cH*0.6,cW*0.5,8));
+  // Conf1 tem 12 colunas, Conf2 tem 6 — proporção 2:1
+  var sec1W = areaEsq * 0.64;
+  var sec2W = areaEsq * 0.34;
 
-    // Titulo do confinamento
-    pdf.setFontSize(7); pdf.setFont('helvetica','bold'); pdf.setTextColor(40,40,40);
+  // Célula padrão: definida pelo Conf1 (12 cols, 8 linhas)
+  var CEL = Math.min(
+    (sec1W - lblW - (12+1)*gap) / 12,  // largura max pelo Conf1
+    (areaH - 7 - (8+1)*gap) / 8         // altura max pelo Conf1 (8 linhas)
+  );
+  CEL = Math.floor(CEL * 10) / 10; // arredondar para baixo
+  var FSZ = Math.max(4.5, Math.min(CEL * 0.62, 8));
+
+  function desenharConf(conf, sx, sy) {
+    // Titulo
+    pdf.setFontSize(6.5); pdf.setFont('helvetica','bold'); pdf.setTextColor(40,40,40);
     pdf.text(conf.nome.toUpperCase(), sx, sy+4);
-
-    var gy2=sy+7;
-    conf.rows.forEach(function(r,ri){
-      var ns=[]; for(var j=1;j<=r.n;j++) ns.push(j);
-      var ry=gy2+ri*(cH+gap);
-      pdf.setFontSize(fSz); pdf.setFont('helvetica','bold'); pdf.setTextColor(80,80,80);
-      pdf.text(r.l, sx+lblW, ry+cH*0.72, {align:'right'});
-      ns.forEach(function(n,ni){
-        var id=gId(conf,r,n);
-        var st=(BD[id]&&BD[id].status)||'liberada';
-        var rgb=hexToRgb(COR_PDF2[st]||'#cccccc');
-        var cx=sx+lblW+gap+ni*(cW+gap);
+    var gy2 = sy + 7;
+    conf.rows.forEach(function(r, ri) {
+      var ns = []; for (var j=1; j<=r.n; j++) ns.push(j);
+      var ry = gy2 + ri*(CEL+gap);
+      // Label linha
+      pdf.setFontSize(FSZ); pdf.setFont('helvetica','bold'); pdf.setTextColor(80,80,80);
+      pdf.text(r.l, sx+lblW, ry+CEL*0.72, {align:'right'});
+      // Células
+      ns.forEach(function(n, ni) {
+        var id = gId(conf, r, n);
+        var st = (BD[id]&&BD[id].status)||'liberada';
+        var rgb = hexToRgb(COR_PDF2[st]||'#cccccc');
+        var cx = sx + lblW + gap + ni*(CEL+gap);
         pdf.setFillColor(rgb[0],rgb[1],rgb[2]);
-        pdf.roundedRect(cx,ry,cW,cH,0.8,0.8,'F');
-        pdf.setTextColor(255,255,255); pdf.setFontSize(fSz); pdf.setFont('helvetica','bold');
-        pdf.text(String(n),cx+cW/2,ry+cH*0.72,{align:'center'});
+        pdf.roundedRect(cx, ry, CEL, CEL, 0.8, 0.8, 'F'); // célula QUADRADA
+        pdf.setTextColor(255,255,255);
+        pdf.setFontSize(FSZ); pdf.setFont('helvetica','bold');
+        pdf.text(String(n), cx+CEL/2, ry+CEL*0.72, {align:'center'});
       });
     });
   }
 
-  // Desenhar confinamentos
   var conf1=CONFS[0], conf2=CONFS[1], conf3=CONFS[2], confSeq=CONFS[3], confRem=CONFS[4];
 
-  desenharConf(conf1, margL, margT, sec1W, areaH);
-  desenharConf(conf2, margL+sec1W+2, margT, sec2W, areaH);
+  // Esquerda: Conf1 e Conf2 lado a lado
+  desenharConf(conf1, margL, margT);
+  desenharConf(conf2, margL + sec1W + 4, margT);
 
-  // Seção 3: Conf3, Seq, Rem empilhados
-  var sx3=margL+sec1W+sec2W+4;
-  var altConf3=areaH*0.22, altSeq=areaH*0.22, altRem=areaH*0.12;
-  desenharConf(conf3, sx3, margT, sec3W, altConf3);
-  desenharConf(confSeq, sx3, margT+altConf3+4, sec3W, altSeq);
-  desenharConf(confRem, sx3, margT+altConf3+altSeq+8, sec3W, altRem);
+  // Direita: Sequestro em cima, Conf3 + Remanga embaixo lado a lado
+  var sx3 = margL + areaEsq + 6;
+  var altSeq = 7 + 2*(CEL+gap) + 4; // 2 linhas SEQ
+  var altConf3 = 7 + 2*(CEL+gap);   // 2 linhas Conf3
+
+  desenharConf(confSeq, sx3, margT);
+  desenharConf(conf3, sx3, margT + altSeq + 3);
+  // Remanga do lado do Conf3
+  var sx3Rem = sx3 + lblW + gap + 11*(CEL+gap) + 4;
+  desenharConf(confRem, sx3Rem, margT + altSeq + 3);
 
   // Legenda no rodape
   var legY=HL-10;
