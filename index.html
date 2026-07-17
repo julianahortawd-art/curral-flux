@@ -3079,12 +3079,14 @@ async function gerarPDFCompleto() {
   var altFaixa2 = areaH * 0.20; // Seq+Conf3
   var altFaixa3 = areaH * 0.08; // Rem
 
-  // Célula calculada para caber TUDO na página
-  // Restrição horizontal faixa 2 (Seq 14 + Conf3 11 = 25 cols) é a mais restritiva
+  // Célula calculada para caber TUDO na página landscape
+  // Faixa 2 (Seq 14 + Conf3 11 = 25 cols) é a restrição horizontal mais apertada
+  var sep = 5; // separador entre confinamentos lado a lado
+  var div = 4; // separador entre faixas verticais
   var CEL = Math.min(
-    (areaW - 2*lblW - 5 - 18*gap) / 18,  // faixa 1: 12+6 cols
-    (areaW - 2*lblW - 5 - 25*gap) / 25,  // faixa 2: 14+11 cols
-    (areaH - 21 - 8 - 13*gap) / 13        // vertical: 10+2+1 linhas
+    (areaW - 2*lblW - sep - 18*gap) / 18,  // faixa 1: Conf1(12)+Conf2(6)
+    (areaW - 2*lblW - sep - 25*gap) / 25,  // faixa 2: Seq(14)+Conf3(11)
+    (areaH - 3*7 - 2*div - 13*gap) / 13    // vertical: 10+2+1 linhas + 3 títulos
   );
   CEL = Math.floor(CEL * 10) / 10;
   var FSZ = Math.max(4.5, Math.min(CEL * 0.65, 8));
@@ -3120,17 +3122,17 @@ async function gerarPDFCompleto() {
   var wConf1 = lblW + gap + 12*(CEL+gap);
   var wConf2 = lblW + gap +  6*(CEL+gap);
   desenharConf(conf1, margL, y1);
-  desenharConf(conf2, margL + wConf1 + 5, y1);
+  desenharConf(conf2, margL + wConf1 + sep, y1);
 
   // ── FAIXA 2: Sequestro | Conf3 ──
-  var y2 = y1 + 7 + 10*(CEL+gap) + 5; // após Conf2 (10 linhas)
+  var y2 = y1 + 7 + 10*(CEL+gap) + div; // após Conf2 (10 linhas)
   pdf.setDrawColor(210,210,210); pdf.line(margL, y2-2, WL-margL, y2-2);
   var wSeq = lblW + gap + 14*(CEL+gap);
   desenharConf(confSeq, margL, y2);
-  desenharConf(conf3, margL + wSeq + 5, y2);
+  desenharConf(conf3, margL + wSeq + sep, y2);
 
   // ── FAIXA 3: Remanga ──
-  var y3 = y2 + 7 + 2*(CEL+gap) + 4;
+  var y3 = y2 + 7 + 2*(CEL+gap) + div;
   pdf.setDrawColor(210,210,210); pdf.line(margL, y3-2, WL-margL, y3-2);
   desenharConf(confRem, margL, y3);
 
