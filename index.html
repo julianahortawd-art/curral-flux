@@ -77,7 +77,7 @@ footer{text-align:center;padding:32px;border-top:1px solid var(--border);backgro
 :root {
   --verde: #4CAF50; --vermelho: #F44336; --laranja: #FF9800;
   --amarelo: #FFC107; --azul: #2196F3; --roxo: #AB47BC;
-  --marrom: #795548; --rosa: #E91E8C;
+  --marrom: #795548; --amarelo: #FFC107;
   --bg: #f0f2f5; --card: #fff; --text: #1a1a2e; --sub: #666;
   --border: #e0e0e0;
 }
@@ -815,7 +815,7 @@ window.addEventListener('load', function(){
       <button onclick="acaoEmLote('limpeza_iniciada')" style="padding:6px 12px;border-radius:8px;border:none;background:#2196F3;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🧹 Iniciar limpeza</button>
       <button onclick="acaoEmLote('transporte')"       style="padding:6px 12px;border-radius:8px;border:none;background:#AB47BC;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🚛 Transporte</button>
       <button onclick="acaoEmLote('cascalho')"         style="padding:6px 12px;border-radius:8px;border:none;background:#795548;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🪨 Cascalho</button>
-      <button onclick="acaoEmLote('reparacao')"        style="padding:6px 12px;border-radius:8px;border:none;background:#E91E8C;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🔧 Reparação</button>
+      <button onclick="acaoEmLote('reparacao')"        style="padding:6px 12px;border-radius:8px;border:none;background:#FFC107;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🔧 Reparação</button>
       <button onclick="acaoEmLote('liberada')"         style="padding:6px 12px;border-radius:8px;border:none;background:#4CAF50;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">✅ Liberar</button>
       <button onclick="acaoEmLote('entrada_animal')\"   style=\"padding:6px 12px;border-radius:8px;border:none;background:#F44336;color:#fff;font-size:12px;font-weight:600;cursor:pointer;\">🐂 Entrada animal</button>
       <button id="btn-desfazer-lote" onclick="desfazerLote()" style="display:none;padding:6px 12px;border-radius:8px;border:2px solid #e53935;background:#fff;color:#e53935;font-size:12px;font-weight:700;cursor:pointer;margin-left:8px;">↩ Desfazer último lote</button>
@@ -1373,7 +1373,7 @@ var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyzeSfZTlCCr6D4FZcdnY3
 var COR = {
   ocupada:'#F44336', embarcada:'#FF9800', 
   limpeza:'#2196F3', transporte:'#AB47BC', cascalho:'#795548',
-  reparacao:'#E91E8C', liberada:'#4CAF50'
+  reparacao:'#FFC107', liberada:'#4CAF50'
 };
 var LABELS = {
   ocupada:'Ocupada', embarcada:'Embarcada', 
@@ -2969,52 +2969,79 @@ async function gerarPDFCompleto() {
     pdf.text('Gerado em: ' + hoje, W - 10, H - 5, { align: 'right' });
   }
 
-  async function capturar(el, escala, bg) {
-    return await html2canvas(el, { scale: escala || 1.5, backgroundColor: bg || '#f5f0e8', useCORS: true });
+  // Captura elemento em largura fixa para evitar distorção
+  async function capturar(el, bg) {
+    var larguraFixa = 1200;
+    return await html2canvas(el, {
+      scale: 2,
+      backgroundColor: bg || '#f5f0e8',
+      useCORS: true,
+      width: larguraFixa,
+      windowWidth: larguraFixa
+    });
   }
 
+  // Adiciona canvas fatiado no PDF portrait
   function adicionarCanvas(canvas, startY, titulo) {
-    var largura = W - 20;
-    var totalH = (canvas.height / canvas.width) * largura;
-    var pageH = H - startY - 15;
+    var margem = 10;
+    var larguraPDF = W - margem * 2;
+    var razao = larguraPDF / canvas.width;
+    var alturaTotal = canvas.height * razao;
+    var alturaUtil = H - startY - 12;
     var yOffset = 0; var pg = 0;
-    while (yOffset < totalH) {
-      if (pg > 0) { pdf.addPage(); addHeaderP(titulo); startY = 20; pageH = H - 35; }
-      var srcY = (yOffset / totalH) * canvas.height;
-      var srcH = Math.min((pageH / totalH) * canvas.height, canvas.height - srcY);
-      var sliceH = (srcH / canvas.height) * totalH;
+
+    while (yOffset < alturaTotal) {
+      if (pg > 0) { pdf.addPage(); addHeaderP(titulo); startY = 20; alturaUtil = H - 32; }
+      var fracaoInicio = yOffset / alturaTotal;
+      var fracaoFim = Math.min((yOffset + alturaUtil) / alturaTotal, 1);
+      var srcY = Math.round(fracaoInicio * canvas.height);
+      var srcH = Math.round((fracaoFim - fracaoInicio) * canvas.height);
+      var sliceH = srcH * razao;
       var sc = document.createElement('canvas');
-      sc.width = canvas.width; sc.height = Math.ceil(srcH);
+      sc.width = canvas.width; sc.height = srcH;
       sc.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
-      pdf.addImage(sc.toDataURL('image/png'), 'PNG', 10, pg === 0 ? startY : 20, largura, sliceH);
+      pdf.addImage(sc.toDataURL('image/jpeg', 0.92), 'JPEG', margem, pg === 0 ? startY : 20, larguraPDF, sliceH);
       addRodape();
-      yOffset += pageH; pg++;
+      yOffset += alturaUtil; pg++;
     }
   }
 
-  // ── PARTE 1: Resumo Geral (dashboard) ──
-  addHeaderP('Relatório Completo');
+  // ── PARTE 1: Resumo Geral ──
+  addHeaderP('Relatório Completo — Resumo Geral');
   var secDash = document.getElementById('secao-dashboard');
   if (secDash) {
-    var c1 = await capturar(secDash);
+    var c1 = await capturar(secDash, '#f5f0e8');
     adicionarCanvas(c1, 20, 'Resumo Geral');
   }
 
   // ── PARTE 2: Histórico & Distribuição ──
   var secHist = document.querySelector('.charts-grid');
+  if (!secHist) secHist = document.getElementById('secao-dashboard');
   if (secHist) {
     pdf.addPage(); addHeaderP('Histórico & Distribuição');
-    var c2 = await capturar(secHist, 1.5, '#ffffff');
+    var c2 = await capturar(secHist, '#ffffff');
     adicionarCanvas(c2, 20, 'Histórico & Distribuição');
   }
 
   // ── PARTE 3: Ranking de Currais ──
-  var secRanking = document.getElementById('secao-ranking') ||
-                   document.querySelector('[id*="ranking"]');
+  // Navegar para aba do ranking temporariamente
+  var abaAtual = document.querySelector('.tab-btn.active') || document.querySelector('[onclick*="trocarAba"]');
+  var secRanking = document.getElementById('secao-ranking');
+  if (!secRanking) {
+    // Tentar mostrar a seção temporariamente
+    var candidatos = ['secao-ranking', 'ranking-section', 'aba-ranking'];
+    for (var ci2 = 0; ci2 < candidatos.length; ci2++) {
+      secRanking = document.getElementById(candidatos[ci2]);
+      if (secRanking) break;
+    }
+  }
   if (secRanking) {
+    var eraMostrado = secRanking.style.display;
+    secRanking.style.display = 'block';
     pdf.addPage(); addHeaderP('Ranking de Currais');
-    var c3 = await capturar(secRanking, 1.5, '#ffffff');
+    var c3 = await capturar(secRanking, '#ffffff');
     adicionarCanvas(c3, 20, 'Ranking de Currais');
+    secRanking.style.display = eraMostrado;
   }
 
   // ── PARTE 4: Mapa de Currais — todos os confinamentos em página landscape ──
@@ -3409,7 +3436,7 @@ function renderCardsLimpezas(dados) {
       <div style="font-size:11px;color:var(--sub);">🪨 Com cascalho</div>
     </div>
     <div style="background:var(--card);border-radius:10px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,0.07);text-align:center;">
-      <div style="font-size:22px;font-weight:800;color:#E91E8C;">${comRep}</div>
+      <div style="font-size:22px;font-weight:800;color:#FFC107;">${comRep}</div>
       <div style="font-size:11px;color:var(--sub);">🔧 Com reparação</div>
     </div>
   `;
@@ -4719,7 +4746,7 @@ function renderLinhaTempoProj(dados, hoje) {
   // Linha de hoje
   var hojeOffset = ((hoje - minData)/(1000*3600*24)) / totalDias * 100;
   if (hojeOffset >= 0 && hojeOffset <= 100) {
-    html += '<div style="position:absolute;left:'+hojeOffset+'%;top:0;bottom:0;width:2px;background:#E91E8C;z-index:3;" title="Hoje"></div>';
+    html += '<div style="position:absolute;left:'+hojeOffset+'%;top:0;bottom:0;width:2px;background:#FFC107;z-index:3;" title="Hoje"></div>';
   }
   html += '</div></th></tr></thead><tbody>';
 
@@ -4760,7 +4787,7 @@ function renderLinhaTempoProj(dados, hoje) {
 
     // Linha de hoje
     if (hojeOffset >= 0 && hojeOffset <= 100) {
-      html += '<div style="position:absolute;left:'+hojeOffset+'%;top:0;bottom:0;width:1px;background:#E91E8C;opacity:0.5;z-index:3;"></div>';
+      html += '<div style="position:absolute;left:'+hojeOffset+'%;top:0;bottom:0;width:1px;background:#FFC107;opacity:0.5;z-index:3;"></div>';
     }
 
     html += '</div></td></tr>';
