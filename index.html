@@ -2989,14 +2989,14 @@ async function gerarPDFCompleto() {
   function cardResumo(label, valor, cor, x, y2, w) {
     pdf.setFillColor(255,255,255); pdf.roundedRect(x, y2, w, 22, 2, 2, 'F');
     pdf.setDrawColor(220,210,195); pdf.roundedRect(x, y2, w, 22, 2, 2, 'S');
-    var rgb = hexToRgb(cor);
+    var rgb = hexToRgb(typeof cor === 'string' && cor[0]==='#' ? cor : '#333333');
     pdf.setFontSize(16); pdf.setFont('helvetica','bold'); pdf.setTextColor(rgb[0],rgb[1],rgb[2]);
     pdf.text(String(valor), x+w/2, y2+12, {align:'center'});
     pdf.setFontSize(7); pdf.setFont('helvetica','normal'); pdf.setTextColor(120,120,120);
     pdf.text(label, x+w/2, y2+19, {align:'center'});
   }
 
-  function blocoResumo(titulo, grupo, corTitulo, y0) {
+  function blocoResumo(titulo, grupo, corTitulo, corTaxa, y0) {
     pdf.setFontSize(9); pdf.setFont('helvetica','bold'); pdf.setTextColor(corTitulo[0],corTitulo[1],corTitulo[2]);
     pdf.text(titulo, 10, y0); y0 += 3;
     var bw = (WP-20)/6; var bx = 10;
@@ -3010,7 +3010,7 @@ async function gerarPDFCompleto() {
     cardResumo('Disponíveis', li, '#4CAF50', bx, y0, bw); bx+=bw+1;
     cardResumo('Em limpeza', lp, '#2196F3', bx, y0, bw); bx+=bw+1;
     cardResumo('Embarcadas', em, '#FF9800', bx, y0, bw); bx+=bw+1;
-    cardResumo('Tx. Ocupação', tx+'%', corTitulo[3]||'#C08332', bx, y0, bw);
+    cardResumo('Tx. Ocupação', tx+'%', corTaxa, bx, y0, bw);
     return y0 + 26;
   }
 
@@ -3031,9 +3031,9 @@ async function gerarPDFCompleto() {
 
   var eng = todos.filter(function(b){return ENGORDA.includes(b.confinamento);});
   var rec = todos.filter(function(b){return RECRIA.includes(b.confinamento);});
-  y = blocoResumo('🐂 Engorda (Confinamento 1, 2 e Remanga)', eng, [140,77,46,'#C08332'], y);
+  y = blocoResumo('🐂 Engorda (Confinamento 1, 2 e Remanga)', eng, [140,77,46], '#C08332', y);
   y += 2;
-  y = blocoResumo('🌱 Recria Confinada (Confinamento 3 e Sequestro)', rec, [104,98,48,'#686230'], y);
+  y = blocoResumo('🌱 Recria Confinada (Confinamento 3 e Sequestro)', rec, [104,98,48], '#686230', y);
   y += 6;
 
   // Distribuição por status (barras horizontais)
