@@ -77,7 +77,7 @@ footer{text-align:center;padding:32px;border-top:1px solid var(--border);backgro
 :root {
   --verde: #4CAF50; --vermelho: #F44336; --laranja: #FF9800;
   --amarelo: #FFC107; --azul: #2196F3; --roxo: #AB47BC;
-  --marrom: #795548; --amarelo: #FFC107;
+  --marrom: #795548; --ciano: #00ACC1; --roxo-escuro: #7E57C2;
   --bg: #f0f2f5; --card: #fff; --text: #1a1a2e; --sub: #666;
   --border: #e0e0e0;
 }
@@ -138,6 +138,12 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color:
 .card.liberadas .card-bar { background: var(--verde); }
 .card.limpeza .card-value { color: var(--azul); }
 .card.limpeza .card-bar { background: var(--azul); }
+.card.limpezafin .card-value { color: var(--ciano); }
+.card.limpezafin .card-bar { background: var(--ciano); }
+.card.cascalho .card-value { color: var(--marrom); }
+.card.cascalho .card-bar { background: var(--marrom); }
+.card.manutencao .card-value { color: var(--roxo-escuro); }
+.card.manutencao .card-bar { background: var(--roxo-escuro); }
 .card.embarcadas .card-value { color: var(--laranja); }
 .card.embarcadas .card-bar { background: var(--laranja); }
 
@@ -529,7 +535,25 @@ window.addEventListener('load', function(){
     <div class="card limpeza" onclick="abrirBreakdown('limpeza')">
       <div class="card-icon">🧹</div>
       <div class="card-value" id="c-limpeza">—</div>
-      <div class="card-label">Em processo de limpeza</div>
+      <div class="card-label">Limpeza/Transp. Orgânicos - Iniciada</div>
+      <div class="card-bar"></div>
+    </div>
+    <div class="card limpezafin" onclick="abrirBreakdown('limpezafin')">
+      <div class="card-icon">✅</div>
+      <div class="card-value" id="c-limpezafin">—</div>
+      <div class="card-label">Limpeza/Transp. Orgânicos - Finalizado</div>
+      <div class="card-bar"></div>
+    </div>
+    <div class="card cascalho" onclick="abrirBreakdown('cascalho')">
+      <div class="card-icon">🪨</div>
+      <div class="card-value" id="c-cascalho">—</div>
+      <div class="card-label">Cascalho</div>
+      <div class="card-bar"></div>
+    </div>
+    <div class="card manutencao" onclick="abrirBreakdown('manutencao')">
+      <div class="card-icon">🔧</div>
+      <div class="card-value" id="c-manutencao">—</div>
+      <div class="card-label">Manutenção Infra</div>
       <div class="card-bar"></div>
     </div>
     <div class="card embarcadas" onclick="abrirBreakdown('embarcadas')">
@@ -565,7 +589,25 @@ window.addEventListener('load', function(){
     <div class="card limpeza">
       <div class="card-icon">🧹</div>
       <div class="card-value" id="eg-limpeza">—</div>
-      <div class="card-label">Em processo de limpeza</div>
+      <div class="card-label">Limpeza/Transp. - Iniciada</div>
+      <div class="card-bar"></div>
+    </div>
+    <div class="card limpezafin">
+      <div class="card-icon">✅</div>
+      <div class="card-value" id="eg-limpezafin">—</div>
+      <div class="card-label">Limpeza/Transp. - Finalizado</div>
+      <div class="card-bar"></div>
+    </div>
+    <div class="card cascalho">
+      <div class="card-icon">🪨</div>
+      <div class="card-value" id="eg-cascalho">—</div>
+      <div class="card-label">Cascalho</div>
+      <div class="card-bar"></div>
+    </div>
+    <div class="card manutencao">
+      <div class="card-icon">🔧</div>
+      <div class="card-value" id="eg-manutencao">—</div>
+      <div class="card-label">Manutenção Infra</div>
       <div class="card-bar"></div>
     </div>
     <div class="card embarcadas">
@@ -606,7 +648,25 @@ window.addEventListener('load', function(){
     <div class="card limpeza">
       <div class="card-icon">🧹</div>
       <div class="card-value" id="rc-limpeza">—</div>
-      <div class="card-label">Em processo de limpeza</div>
+      <div class="card-label">Limpeza/Transp. - Iniciada</div>
+      <div class="card-bar"></div>
+    </div>
+    <div class="card limpezafin">
+      <div class="card-icon">✅</div>
+      <div class="card-value" id="rc-limpezafin">—</div>
+      <div class="card-label">Limpeza/Transp. - Finalizado</div>
+      <div class="card-bar"></div>
+    </div>
+    <div class="card cascalho">
+      <div class="card-icon">🪨</div>
+      <div class="card-value" id="rc-cascalho">—</div>
+      <div class="card-label">Cascalho</div>
+      <div class="card-bar"></div>
+    </div>
+    <div class="card manutencao">
+      <div class="card-icon">🔧</div>
+      <div class="card-value" id="rc-manutencao">—</div>
+      <div class="card-label">Manutenção Infra</div>
       <div class="card-bar"></div>
     </div>
     <div class="card embarcadas">
@@ -812,12 +872,12 @@ window.addEventListener('load', function(){
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button onclick="acaoEmLote('embarque')"        style="padding:6px 12px;border-radius:8px;border:none;background:#FF9800;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🚛 Embarcar</button>
-      <button onclick="acaoEmLote('limpeza_iniciada')" style="padding:6px 12px;border-radius:8px;border:none;background:#2196F3;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🧹 Iniciar limpeza</button>
-      <button onclick="acaoEmLote('transporte')"       style="padding:6px 12px;border-radius:8px;border:none;background:#AB47BC;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🚛 Transporte</button>
+      <button onclick="acaoEmLote('limpeza_iniciada')" style="padding:6px 12px;border-radius:8px;border:none;background:#2196F3;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🧹 Iniciar limpeza/transporte</button>
+      <button onclick="acaoEmLote('limpeza_finalizada')" style="padding:6px 12px;border-radius:8px;border:none;background:#00ACC1;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">✅ Finalizar limpeza/transporte</button>
       <button onclick="acaoEmLote('cascalho')"         style="padding:6px 12px;border-radius:8px;border:none;background:#795548;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🪨 Cascalho</button>
-      <button onclick="acaoEmLote('reparacao')"        style="padding:6px 12px;border-radius:8px;border:none;background:#FFC107;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🔧 Reparação</button>
+      <button onclick="acaoEmLote('reparacao')"        style="padding:6px 12px;border-radius:8px;border:none;background:#7E57C2;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🔧 Manutenção Infra</button>
       <button onclick="acaoEmLote('liberada')"         style="padding:6px 12px;border-radius:8px;border:none;background:#4CAF50;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">✅ Liberar</button>
-      <button onclick="acaoEmLote('entrada_animal')\"   style=\"padding:6px 12px;border-radius:8px;border:none;background:#F44336;color:#fff;font-size:12px;font-weight:600;cursor:pointer;\">🐂 Entrada animal</button>
+      <button onclick="acaoEmLote('entrada_animal')"   style="padding:6px 12px;border-radius:8px;border:none;background:#F44336;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🐂 Entrada animal</button>
       <button id="btn-desfazer-lote" onclick="desfazerLote()" style="display:none;padding:6px 12px;border-radius:8px;border:2px solid #e53935;background:#fff;color:#e53935;font-size:12px;font-weight:700;cursor:pointer;margin-left:8px;">↩ Desfazer último lote</button>
     </div>
     <div style="display:flex;gap:8px;margin-left:auto;">
@@ -1372,21 +1432,21 @@ var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyzeSfZTlCCr6D4FZcdnY3
 
 var COR = {
   ocupada:'#F44336', embarcada:'#FF9800', 
-  limpeza:'#2196F3', transporte:'#AB47BC', cascalho:'#795548',
-  reparacao:'#FFC107', liberada:'#4CAF50'
+  limpeza:'#2196F3', limpeza_finalizada:'#00ACC1', cascalho:'#795548',
+  reparacao:'#7E57C2', liberada:'#4CAF50'
 };
 var LABELS = {
   ocupada:'Ocupada', embarcada:'Embarcada', 
-  limpeza:'Limpeza iniciada', transporte:'Em transporte', cascalho:'Cascalho',
-  reparacao:'Reparação infra', liberada:'Liberada'
+  limpeza:'Limpeza e Transporte Orgânicos - Iniciada', limpeza_finalizada:'Limpeza e Transporte Orgânicos - Finalizado', cascalho:'Cascalho',
+  reparacao:'Manutenção Infra', liberada:'Liberada'
 };
 var ACOES = {
   ocupada:    [{acao:'embarque',         label:'🚛 Embarcar'}],
   embarcada:  [{acao:'limpeza_iniciada', label:'🧹 Iniciar Limpeza'}],
-  limpeza:    [{acao:'transporte',label:'🚜 Transporte'},{acao:'cascalho',label:'⛏️ Cascalho'},{acao:'reparacao',label:'🔧 Reparação'},{acao:'liberada',label:'✅ Liberar Curral'}],
-  transporte: [{acao:'cascalho',label:'⛏️ Cascalho'},{acao:'reparacao',label:'🔧 Reparação'},{acao:'liberada',label:'✅ Liberar Curral'}],
-  cascalho:   [{acao:'transporte',label:'🚜 Transporte'},{acao:'reparacao',label:'🔧 Reparação'},{acao:'liberada',label:'✅ Liberar Curral'}],
-  reparacao:  [{acao:'transporte',label:'🚜 Transporte'},{acao:'cascalho',label:'⛏️ Cascalho'},{acao:'liberada',label:'✅ Liberar Curral'}],
+  limpeza:    [{acao:'limpeza_finalizada',label:'✅ Finalizar Limpeza/Transporte'}],
+  limpeza_finalizada: [{acao:'cascalho',label:'⛏️ Cascalho'},{acao:'reparacao',label:'🔧 Manutenção Infra'},{acao:'liberada',label:'✅ Liberar Curral'}],
+  cascalho:   [{acao:'reparacao',label:'🔧 Manutenção Infra'},{acao:'liberada',label:'✅ Liberar Curral'}],
+  reparacao:  [{acao:'cascalho',label:'⛏️ Cascalho'},{acao:'liberada',label:'✅ Liberar Curral'}],
   liberada:   [{acao:'entrada_animal',   label:'🐂 Entrada de Animal'}],
   aguardando: [{acao:'limpeza_iniciada', label:'🧹 Iniciar Limpeza'}],
 };
@@ -1530,12 +1590,14 @@ function processarDados(data) {
 function atualizarCards() {
   var todos = Object.values(BD);
   var contar = (st) => todos.filter(b => b.status === st).length;
-  var emLimp = todos.filter(b => ['limpeza','transporte','cascalho','reparacao'].includes(b.status)).length;
-  document.getElementById('c-total').textContent     = todos.length;
-  document.getElementById('c-ocupadas').textContent  = contar('ocupada');
-  document.getElementById('c-liberadas').textContent = contar('liberada');
-  document.getElementById('c-limpeza').textContent   = emLimp;
-  document.getElementById('c-embarcadas').textContent= contar('embarcada');
+  document.getElementById('c-total').textContent       = todos.length;
+  document.getElementById('c-ocupadas').textContent     = contar('ocupada');
+  document.getElementById('c-liberadas').textContent    = contar('liberada');
+  document.getElementById('c-limpeza').textContent      = contar('limpeza');
+  document.getElementById('c-limpezafin').textContent   = contar('limpeza_finalizada');
+  document.getElementById('c-cascalho').textContent     = contar('cascalho');
+  document.getElementById('c-manutencao').textContent   = contar('reparacao');
+  document.getElementById('c-embarcadas').textContent   = contar('embarcada');
 
   // Grupos: Engorda = Conf 1, 2, Remanga | Recria = Conf 3, Sequestro
   var ENGORDA  = ['Confinamento 1','Confinamento 2','Remanga'];
@@ -1544,15 +1606,19 @@ function atualizarCards() {
   var recria   = todos.filter(b => RECRIA.includes(b.confinamento));
 
   function calcGrupo(grupo, prefixo) {
-    var total     = grupo.length;
-    var ocupadas  = grupo.filter(b => b.status === 'ocupada').length;
-    var livres    = grupo.filter(b => b.status === 'liberada').length;
-    var limpeza   = grupo.filter(b => ['limpeza','transporte','cascalho','reparacao'].includes(b.status)).length;
-    var embarcadas= grupo.filter(b => b.status === 'embarcada').length;
-    var taxa      = total > 0 ? Math.round((ocupadas + embarcadas) / total * 100) : 0;
+    var total       = grupo.length;
+    var ocupadas    = grupo.filter(b => b.status === 'ocupada').length;
+    var livres      = grupo.filter(b => b.status === 'liberada').length;
+    var limpeza     = grupo.filter(b => b.status === 'limpeza').length;
+    var limpezafin  = grupo.filter(b => b.status === 'limpeza_finalizada').length;
+    var cascalho    = grupo.filter(b => b.status === 'cascalho').length;
+    var manutencao  = grupo.filter(b => b.status === 'reparacao').length;
+    var embarcadas  = grupo.filter(b => b.status === 'embarcada').length;
+    var taxa        = total > 0 ? Math.round((ocupadas + embarcadas) / total * 100) : 0;
     var s = function(id, v) { var el = document.getElementById(prefixo + id); if (el) el.textContent = v; };
     s('total', total); s('ocupadas', ocupadas); s('livres', livres);
-    s('limpeza', limpeza); s('embarcadas', embarcadas); s('taxa', taxa + '%');
+    s('limpeza', limpeza); s('limpezafin', limpezafin); s('cascalho', cascalho); s('manutencao', manutencao);
+    s('embarcadas', embarcadas); s('taxa', taxa + '%');
   }
   calcGrupo(engorda, 'eg-');
   calcGrupo(recria,  'rc-');
@@ -1563,7 +1629,7 @@ function coletarAlertas() {
   var alertas = [];
   var agora = new Date();
   Object.entries(BD).forEach(([baiaId, b]) => {
-    var emLimp = ['limpeza','transporte','cascalho','reparacao'].includes(b.status);
+    var emLimp = ['limpeza','limpeza_finalizada','cascalho','reparacao'].includes(b.status);
     if (emLimp && b.data) {
       var d = new Date(b.data);
       if (!isNaN(d)) {
@@ -1620,7 +1686,7 @@ function renderAlertas() {
   // Contar por tipo
   var semLimpeza   = alertas.filter(a => a.tipo === 'embarque').length;
   var limpDemorada = alertas.filter(a => a.tipo === 'limpeza').length;
-  var emLimpeza    = Object.values(BD).filter(b => ['limpeza','transporte','cascalho','reparacao'].includes(b.status)).length;
+  var emLimpeza    = Object.values(BD).filter(b => ['limpeza','limpeza_finalizada','cascalho','reparacao'].includes(b.status)).length;
 
   if (alertas.length === 0) {
     div.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:#e8f5e9;border-radius:10px;font-size:13px;color:#2e7d32;width:100%;"><span style="font-size:18px;">✅</span> Nenhum alerta crítico no momento.</div>`;
@@ -1661,7 +1727,7 @@ function renderAlertasAba(filtro) {
 
   var semLimpeza   = alertas.filter(a => a.tipo === 'embarque');
   var limpDemorada = alertas.filter(a => a.tipo === 'limpeza');
-  var emLimpeza    = Object.values(BD).filter(b => ['limpeza','transporte','cascalho','reparacao'].includes(b.status));
+  var emLimpeza    = Object.values(BD).filter(b => ['limpeza','limpeza_finalizada','cascalho','reparacao'].includes(b.status));
 
   // ── Cards de resumo clicáveis ──
   var estiloCard = (tipo, bg, borda, corNum, corLabel) => {
@@ -1799,7 +1865,10 @@ var BREAKDOWN_CONFIG = {
   total:     { title: '🏚 Total de Currais por Área',       filtro: b => true,                                                  cor: '#1a1a2e' },
   ocupadas:  { title: '🐂 Currais Ocupadas por Área',        filtro: b => b.status === 'ocupada',                                cor: '#F44336' },
   liberadas: { title: '✅ Disponíveis p/ Entrada por Área', filtro: b => b.status === 'liberada',                              cor: '#4CAF50' },
-  limpeza:   { title: '🧹 Em Limpeza por Área',            filtro: b => ['limpeza','transporte','cascalho','reparacao'].includes(b.status), cor: '#2196F3' },
+  limpeza:   { title: '🧹 Limpeza/Transp. Orgânicos - Iniciada por Área', filtro: b => b.status === 'limpeza',                  cor: '#2196F3' },
+  limpezafin:{ title: '✅ Limpeza/Transp. Orgânicos - Finalizado por Área', filtro: b => b.status === 'limpeza_finalizada',     cor: '#00ACC1' },
+  cascalho:  { title: '🪨 Cascalho por Área',                filtro: b => b.status === 'cascalho',                              cor: '#795548' },
+  manutencao:{ title: '🔧 Manutenção Infra por Área',        filtro: b => b.status === 'reparacao',                             cor: '#7E57C2' },
   embarcadas:{ title: '🚛 Embarcadas por Área',            filtro: b => b.status === 'embarcada',                              cor: '#FF9800' },
 };
 
@@ -1868,7 +1937,7 @@ function irParaMapaFiltrado(confinamento, cfg) {
     var statusParaFiltrar = null;
     var testBaias = Object.values(BD);
     // Testar quais status o filtro aceita
-    var statusAceitos = ['ocupada','embarcada','limpeza','transporte','cascalho','reparacao','liberada'].filter(st => {
+    var statusAceitos = ['ocupada','embarcada','limpeza','limpeza_finalizada','cascalho','reparacao','liberada'].filter(st => {
       return cfg.filtro({ status: st, confinamento: confinamento });
     });
     if (statusAceitos.length === 1) {
@@ -2266,7 +2335,7 @@ function renderMapa() {
     });
     var total    = curraisDeste.length;
     var ocupadas = curraisDeste.filter(b => b.status === 'ocupada').length;
-    var emLimp   = curraisDeste.filter(b => ['limpeza','transporte','cascalho','reparacao'].includes(b.status)).length;
+    var emLimp   = curraisDeste.filter(b => ['limpeza','limpeza_finalizada','cascalho','reparacao'].includes(b.status)).length;
     var livres   = curraisDeste.filter(b => b.status === 'liberada').length;
 
     // Header do confinamento com stats
@@ -2404,10 +2473,10 @@ function limparSelecao() {
 var ACAO_STATUS_VALIDO = {
   embarque:        ["ocupada"],
   limpeza_iniciada:["embarcada"],
-  transporte:      ["limpeza","cascalho","reparacao"],
-  cascalho:        ["limpeza","transporte","reparacao"],
-  reparacao:       ["limpeza","transporte","cascalho"],
-  liberada:        ["limpeza","transporte","cascalho","reparacao"],
+  limpeza_finalizada: ["limpeza"],
+  cascalho:        ["limpeza_finalizada","reparacao"],
+  reparacao:       ["limpeza_finalizada","cascalho"],
+  liberada:        ["limpeza_finalizada","cascalho","reparacao"],
   entrada_animal:  ["liberada"],
 };
 
@@ -2537,7 +2606,7 @@ var ICONES = {
   embarcada:  '<span style="font-size:28px;">🚚</span>',
   aguardando: '<span style="font-size:28px;">⏳</span>',
   limpeza:    '<span style="font-size:28px;">🧹</span>',
-  transporte: '<span style="font-size:28px;">🚛</span>',
+  limpeza_finalizada: '<span style="font-size:28px;">🧼</span>',
   cascalho:   '<span style="font-size:28px;">🪨</span>',
   reparacao:  '<span style="font-size:28px;">🔧</span>',
   liberada:   '<span style="font-size:28px;">✅</span>',
@@ -2958,11 +3027,11 @@ async function gerarPDFCompleto() {
 
   var COR_PDF = {
     ocupada:'#F44336',embarcada:'#FF9800',limpeza:'#2196F3',
-    transporte:'#AB47BC',cascalho:'#795548',reparacao:'#FFC107',liberada:'#4CAF50'
+    limpeza_finalizada:'#00ACC1',cascalho:'#795548',reparacao:'#7E57C2',liberada:'#4CAF50'
   };
   var LBL_PDF = {
-    ocupada:'Ocupada',embarcada:'Embarcada',limpeza:'Limpeza iniciada',
-    transporte:'Em transporte',cascalho:'Cascalho',reparacao:'Reparacao infra',liberada:'Liberada'
+    ocupada:'Ocupada',embarcada:'Embarcada',limpeza:'Limpeza/Transp. Iniciada',
+    limpeza_finalizada:'Limpeza/Transp. Finalizado',cascalho:'Cascalho',reparacao:'Manutencao Infra',liberada:'Liberada'
   };
 
   // Inicia em landscape — página 1 será o mapa, página 2 o resumo
@@ -3078,7 +3147,7 @@ async function gerarPDFCompleto() {
     var bw=(WP-20)/6, bx=10;
     var oc=grupo.filter(function(b){return b.status==='ocupada';}).length;
     var li=grupo.filter(function(b){return b.status==='liberada';}).length;
-    var lp=grupo.filter(function(b){return ['limpeza','transporte','cascalho','reparacao'].includes(b.status);}).length;
+    var lp=grupo.filter(function(b){return ['limpeza','limpeza_finalizada','cascalho','reparacao'].includes(b.status);}).length;
     var em=grupo.filter(function(b){return b.status==='embarcada';}).length;
     var tx=grupo.length>0?Math.round((oc+em)/grupo.length*100):0;
     card('Total',grupo.length,'#333333',bx,y0,bw); bx+=bw+1;
@@ -3100,7 +3169,7 @@ async function gerarPDFCompleto() {
   card('Total Currais',todos.length,'#333333',bx0,y,bw0); bx0+=bw0+1;
   card('Ocupadas',todos.filter(function(b){return b.status==='ocupada';}).length,'#F44336',bx0,y,bw0); bx0+=bw0+1;
   card('Disponiveis',todos.filter(function(b){return b.status==='liberada';}).length,'#4CAF50',bx0,y,bw0); bx0+=bw0+1;
-  card('Em limpeza',todos.filter(function(b){return ['limpeza','transporte','cascalho','reparacao'].includes(b.status);}).length,'#2196F3',bx0,y,bw0); bx0+=bw0+1;
+  card('Em limpeza',todos.filter(function(b){return ['limpeza','limpeza_finalizada','cascalho','reparacao'].includes(b.status);}).length,'#2196F3',bx0,y,bw0); bx0+=bw0+1;
   card('Embarcadas',todos.filter(function(b){return b.status==='embarcada';}).length,'#FF9800',bx0,y,bw0);
   y+=26;
 
@@ -3413,8 +3482,8 @@ function renderCardsLimpezas(dados) {
       <div style="font-size:11px;color:var(--sub);">🪨 Com cascalho</div>
     </div>
     <div style="background:var(--card);border-radius:10px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,0.07);text-align:center;">
-      <div style="font-size:22px;font-weight:800;color:#FFC107;">${comRep}</div>
-      <div style="font-size:11px;color:var(--sub);">🔧 Com reparação</div>
+      <div style="font-size:22px;font-weight:800;color:#7E57C2;">${comRep}</div>
+      <div style="font-size:11px;color:var(--sub);">🔧 Com manutenção infra</div>
     </div>
   `;
 }
@@ -3525,7 +3594,7 @@ async function gerarPDFLimpezas() {
     { label: 'Média duração',   valor: mediaHoras + 'h',   cor: [26,26,46]    },
     { label: 'Com transporte',  valor: comTransp,          cor: [171,71,188]  },
     { label: 'Com cascalho',    valor: comCasc,            cor: [121,85,72]   },
-    { label: 'Com reparação',   valor: comRep,             cor: [233,30,140]  },
+    { label: 'Com manut. infra',   valor: comRep,             cor: [126,87,194]  },
   ];
 
   var cardW = (W - 20) / resumoCards.length;
@@ -3733,7 +3802,7 @@ function getProjecoesSimuladas(diasPerm, diasLimp, filtroConf) {
   filtroConf = filtroConf || 'todos';
 
   var resultado = [];
-  var statusRelevantes = ['ocupada','embarcada','limpeza','transporte','cascalho','reparacao'];
+  var statusRelevantes = ['ocupada','embarcada','limpeza','limpeza_finalizada','cascalho','reparacao'];
   Object.values(BD).forEach(function(b) {
     if (!statusRelevantes.includes(b.status)) return;
     if (filtroConf !== 'todos' && b.confinamento !== filtroConf) return;
@@ -3741,7 +3810,7 @@ function getProjecoesSimuladas(diasPerm, diasLimp, filtroConf) {
     var dataLibProj = null;
     if (b.status === 'ocupada' && dataEntrada) {
       dataLibProj = addDias(addDias(dataEntrada, diasPerm), diasLimp);
-    } else if (['embarcada','transporte','cascalho','reparacao'].includes(b.status)) {
+    } else if (['embarcada','limpeza_finalizada','cascalho','reparacao'].includes(b.status)) {
       var cicloAberto = CICLOS_DATA.filter(function(c) { return c.ID_Baia === b.id && !c.Data_Liberacao && c.Data_Embarque; });
       if (cicloAberto.length > 0) {
         var dEmb = parseDataBR(cicloAberto[0].Data_Embarque);
@@ -4173,8 +4242,8 @@ function exportarBackupExcel() {
     ['Total de Baias', todos.length],
     []
   ];
-  var LABELS = { ocupada:'Ocupada', embarcada:'Embarcada', limpeza:'Em Limpeza',
-                 transporte:'Transporte', cascalho:'Cascalho', reparacao:'Reparação', liberada:'Liberada' };
+  var LABELS = { ocupada:'Ocupada', embarcada:'Embarcada', limpeza:'Limpeza/Transp. Iniciada',
+                 limpeza_finalizada:'Limpeza/Transp. Finalizado', cascalho:'Cascalho', reparacao:'Manutenção Infra', liberada:'Liberada' };
   Object.entries(porStatus).forEach(function(e) {
     resumoRows.push([LABELS[e[0]] || e[0], e[1]]);
   });
@@ -4532,7 +4601,7 @@ function calcularProjecoes() {
   var filtroConf = document.getElementById('proj-filtro-conf').value;
 
   var resultado = [];
-  var statusRelevantes = ['ocupada','embarcada','limpeza','transporte','cascalho','reparacao'];
+  var statusRelevantes = ['ocupada','embarcada','limpeza','limpeza_finalizada','cascalho','reparacao'];
 
   Object.values(BD).forEach(function(b) {
     if (!statusRelevantes.includes(b.status)) return;
@@ -4547,7 +4616,7 @@ function calcularProjecoes() {
         dataLiberacaoProj = addDias(dataEmbarqueProj, diasLimp);
         temData = true;
       }
-    } else if (b.status === 'embarcada' || b.status === 'transporte' || b.status === 'cascalho' || b.status === 'reparacao') {
+    } else if (b.status === 'embarcada' || b.status === 'limpeza_finalizada' || b.status === 'cascalho' || b.status === 'reparacao') {
       // Já embarcou — usa data de embarque real se disponível
       var cicloAberto = CICLOS_DATA.filter(c => c.ID_Baia === b.id && !c.Data_Liberacao && c.Data_Embarque);
       cicloAberto.sort((a,x) => new Date(b.Data_Embarque||0) - new Date(x.Data_Embarque||0));
@@ -5080,7 +5149,7 @@ function analisarImport(linhas) {
         status = 'conflito';
         obs = 'Baia já ocupada sem data de entrada registrada';
         conflito = true;
-      } else if (['embarcada','limpeza','transporte','cascalho','reparacao'].includes(stAtual)) {
+      } else if (['embarcada','limpeza','limpeza_finalizada','cascalho','reparacao'].includes(stAtual)) {
         status = 'bloqueado';
         obs = 'Baia em processo (' + (LABELS[stAtual]||stAtual) + ') — não pode receber nova projeção agora';
         bloqueado = true;
