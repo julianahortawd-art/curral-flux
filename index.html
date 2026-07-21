@@ -120,7 +120,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color:
   background: var(--card); border-radius: 14px; padding: 18px 20px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.07); cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s; position: relative; overflow: hidden;
-  border: 1.5px solid transparent;
+  border: 1.5px solid transparent; text-align: center;
 }
 .card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
 .card.active { border-color: var(--azul); }
@@ -535,13 +535,13 @@ window.addEventListener('load', function(){
     <div class="card limpeza" onclick="abrirBreakdown('limpeza')">
       <div class="card-icon">🧹</div>
       <div class="card-value" id="c-limpeza">—</div>
-      <div class="card-label">Limpeza/Transp. Orgânicos - Iniciada</div>
+      <div class="card-label">Limpeza/Transp. Organics - Iniciada</div>
       <div class="card-bar"></div>
     </div>
     <div class="card limpezafin" onclick="abrirBreakdown('limpezafin')">
       <div class="card-icon">✅</div>
       <div class="card-value" id="c-limpezafin">—</div>
-      <div class="card-label">Limpeza/Transp. Orgânicos - Finalizado</div>
+      <div class="card-label">Limpeza/Transp. Organics - Finalizado</div>
       <div class="card-bar"></div>
     </div>
     <div class="card cascalho" onclick="abrirBreakdown('cascalho')">
@@ -1437,7 +1437,7 @@ var COR = {
 };
 var LABELS = {
   ocupada:'Ocupada', embarcada:'Embarcada', 
-  limpeza:'Limpeza e Transporte Orgânicos - Iniciada', limpeza_finalizada:'Limpeza e Transporte Orgânicos - Finalizado', cascalho:'Cascalho',
+  limpeza:'Limpeza e Transporte Organics - Iniciada', limpeza_finalizada:'Limpeza e Transporte Organics - Finalizado', cascalho:'Cascalho',
   reparacao:'Manutenção Infra', liberada:'Liberada'
 };
 var ACOES = {
@@ -1865,8 +1865,8 @@ var BREAKDOWN_CONFIG = {
   total:     { title: '🏚 Total de Currais por Área',       filtro: b => true,                                                  cor: '#1a1a2e' },
   ocupadas:  { title: '🐂 Currais Ocupadas por Área',        filtro: b => b.status === 'ocupada',                                cor: '#F44336' },
   liberadas: { title: '✅ Disponíveis p/ Entrada por Área', filtro: b => b.status === 'liberada',                              cor: '#4CAF50' },
-  limpeza:   { title: '🧹 Limpeza/Transp. Orgânicos - Iniciada por Área', filtro: b => b.status === 'limpeza',                  cor: '#2196F3' },
-  limpezafin:{ title: '✅ Limpeza/Transp. Orgânicos - Finalizado por Área', filtro: b => b.status === 'limpeza_finalizada',     cor: '#00ACC1' },
+  limpeza:   { title: '🧹 Limpeza/Transp. Organics - Iniciada por Área', filtro: b => b.status === 'limpeza',                  cor: '#2196F3' },
+  limpezafin:{ title: '✅ Limpeza/Transp. Organics - Finalizado por Área', filtro: b => b.status === 'limpeza_finalizada',     cor: '#00ACC1' },
   cascalho:  { title: '🪨 Cascalho por Área',                filtro: b => b.status === 'cascalho',                              cor: '#795548' },
   manutencao:{ title: '🔧 Manutenção Infra por Área',        filtro: b => b.status === 'reparacao',                             cor: '#7E57C2' },
   embarcadas:{ title: '🚛 Embarcadas por Área',            filtro: b => b.status === 'embarcada',                              cor: '#FF9800' },
