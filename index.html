@@ -1490,12 +1490,34 @@ var _ultimoLote = null, _timerDesfazerLote = null;
 var _ultimaAcaoGlobal = null; // { id_baia, responsavel, acao, status_novo } — para desfazer global
 
 // ── FORMATAÇÃO DE DATA ──
+// Converte string vinda do backend (formato BR "dd/MM/yyyy HH:mm:ss" ou "dd/MM/yyyy")
+// em objeto Date local, SEM passar por new Date() direto (que interpreta como MM/dd/yyyy e inverte dia/mês).
+function parseDataBR(dataStr) {
+  if (!dataStr) return null;
+  if (dataStr instanceof Date) return isNaN(dataStr) ? null : dataStr;
+  var s = String(dataStr).trim();
+  // Formato BR: dd/MM/yyyy [HH:mm:ss]
+  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m) {
+    var d = new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]), parseInt(m[4] || 0), parseInt(m[5] || 0), parseInt(m[6] || 0));
+    return isNaN(d) ? null : d;
+  }
+  // Formato ISO: yyyy-MM-dd (fallback, já é seguro em new Date)
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    var d2 = new Date(s.includes('T') ? s : s + 'T00:00:00');
+    return isNaN(d2) ? null : d2;
+  }
+  // Último recurso
+  var d3 = new Date(s);
+  return isNaN(d3) ? null : d3;
+}
+
 function formatarDataBR(dataStr) {
   if (!dataStr) return '—';
   try {
-    var d = new Date(dataStr);
-    if (isNaN(d)) return dataStr;
-    return d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    var d = parseDataBR(dataStr);
+    if (!d) return dataStr;
+    return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
   } catch(e) { return dataStr; }
 }
 
@@ -1658,8 +1680,8 @@ function coletarAlertas() {
   Object.entries(BD).forEach(([baiaId, b]) => {
     var emLimp = ['limpeza','limpeza_finalizada','cascalho','reparacao'].includes(b.status);
     if (emLimp && b.data) {
-      var d = new Date(b.data);
-      if (!isNaN(d)) {
+      var d = parseDataBR(b.data);
+      if (d) {
         var dias = (agora - d) / 864e5;
         if (dias > CONFIG.limiteLimpeza) {
           alertas.push({ baia: b.nome, baiaId, conf: b.confinamento, valor: dias.toFixed(1), unidade: 'dias', status: b.status, tipo: 'limpeza' });
@@ -1667,8 +1689,8 @@ function coletarAlertas() {
       }
     }
     if (b.status === 'embarcada' && b.data) {
-      var d = new Date(b.data);
-      if (!isNaN(d)) {
+      var d = parseDataBR(b.data);
+      if (d) {
         var horas = (agora - d) / 36e5;
         if (horas > CONFIG.limiteEmbarque) {
           alertas.push({ baia: b.nome, baiaId, conf: b.confinamento, valor: horas.toFixed(0), unidade: 'horas', status: b.status, tipo: 'embarque' });
@@ -4603,7 +4625,7 @@ function getDataEntrada(idBaia) {
   // 2. Buscar no CICLOS_DATA o ciclo mais recente SEM Data_Embarque (ciclo aberto)
   var ciclosAbertos = CICLOS_DATA.filter(c => c.ID_Baia === idBaia && !c.Data_Liberacao);
   // Ordenar por Data_Embarque desc (mais recente)
-  ciclosAbertos.sort((a,b) => new Date(b.Data_Embarque||0) - new Date(a.Data_Embarque||0));
+  ciclosAbertos.sort((a,b) => (parseDataBR(b.Data_Embarque)||0) - (parseDataBR(a.Data_Embarque)||0));
   for (var c of ciclosAbertos) {
     if (c.Data_Entrada_Animal) {
       var d = parseDataBR(c.Data_Entrada_Animal);
@@ -4612,7 +4634,7 @@ function getDataEntrada(idBaia) {
   }
   // 3. Buscar qualquer ciclo com Data_Entrada_Animal (o mais recente)
   var todos = CICLOS_DATA.filter(c => c.ID_Baia === idBaia && c.Data_Entrada_Animal);
-  todos.sort((a,b) => new Date(b.Data_Entrada_Animal||0) - new Date(a.Data_Entrada_Animal||0));
+  todos.sort((a,b) => (parseDataBR(b.Data_Entrada_Animal)||0) - (parseDataBR(a.Data_Entrada_Animal)||0));
   if (todos.length > 0) {
     var d = parseDataBR(todos[0].Data_Entrada_Animal);
     if (d) return d;
@@ -4646,7 +4668,7 @@ function calcularProjecoes() {
     } else if (b.status === 'embarcada' || b.status === 'limpeza_finalizada' || b.status === 'cascalho' || b.status === 'reparacao') {
       // Já embarcou — usa data de embarque real se disponível
       var cicloAberto = CICLOS_DATA.filter(c => c.ID_Baia === b.id && !c.Data_Liberacao && c.Data_Embarque);
-      cicloAberto.sort((a,x) => new Date(b.Data_Embarque||0) - new Date(x.Data_Embarque||0));
+      cicloAberto.sort((a,x) => (parseDataBR(b.Data_Embarque)||0) - (parseDataBR(x.Data_Embarque)||0));
       if (cicloAberto.length > 0) {
         var dEmb = parseDataBR(cicloAberto[0].Data_Embarque);
         if (dEmb) {
@@ -4658,7 +4680,7 @@ function calcularProjecoes() {
     } else if (b.status === 'limpeza') {
       // Em limpeza — usa data de início de limpeza
       var cicloLimp = CICLOS_DATA.filter(c => c.ID_Baia === b.id && c.Data_Limpeza_Inicio && !c.Data_Liberacao);
-      cicloLimp.sort((a,x) => new Date(b.Data_Limpeza_Inicio||0) - new Date(x.Data_Limpeza_Inicio||0));
+      cicloLimp.sort((a,x) => (parseDataBR(b.Data_Limpeza_Inicio)||0) - (parseDataBR(x.Data_Limpeza_Inicio)||0));
       if (cicloLimp.length > 0) {
         var dLimp = parseDataBR(cicloLimp[0].Data_Limpeza_Inicio);
         if (dLimp) {
