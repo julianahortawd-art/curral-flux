@@ -298,35 +298,29 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color:
 }
 
   .back-ecossistema{
-    position:fixed;
-    top:10px;
-    left:14px;
-    z-index:10000;
     display:inline-flex;
     align-items:center;
     gap:6px;
     font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    font-size:12px;
+    font-size:11px;
     color:#9fb0a1;
     text-decoration:none;
     border:1px solid #33493c;
-    padding:6px 12px;
+    padding:5px 10px;
     border-radius:999px;
-    background:#12201a;
-    transition:border-color .15s, color .15s;
+    background:#12201aee;
+    transition:border-color .15s, color .15s, opacity .15s;
+    opacity:0.75;
   }
   .back-ecossistema:hover{
     border-color:#c9973f;
     color:#c9973f;
+    opacity:1;
   }
 
   </style>
 </head>
 <body>
-
-<a class="back-ecossistema" href="https://ecosparana.vercel.app/">
-  ← Ecossistema Grupo Agroparanã
-</a>
 
 <!-- FUNÇÕES GLOBAIS -->
 <script>
@@ -456,6 +450,11 @@ window.addEventListener('load', function(){
     <footer>
       <p>© 2026 Curral Flux</p>
       <p style="margin-top:8px;">Desenvolvido por Juliana Horta Wilke Diniz</p>
+      <p style="margin-top:10px;">
+        <a class="back-ecossistema" href="https://ecosparana.vercel.app/" title="Voltar ao Ecossistema Grupo Agroparanã">
+          ← Ecossistema Grupo Agroparanã
+        </a>
+      </p>
     </footer>
   </div>
 
@@ -1447,6 +1446,11 @@ window.addEventListener('load', function(){
 <!-- RODAPÉ -->
 <div style="text-align:center;padding:24px;font-size:11px;color:#aaa;margin-top:16px;">
   Desenvolvido por Juliana Horta Wilke Diniz
+  <div style="margin-top:10px;">
+    <a class="back-ecossistema" href="https://ecosparana.vercel.app/" title="Voltar ao Ecossistema Grupo Agroparanã">
+      ← Ecossistema Grupo Agroparanã
+    </a>
+  </div>
 </div>
 
 
