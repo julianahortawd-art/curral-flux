@@ -1841,7 +1841,7 @@ function renderAlertasAba(filtro) {
   if (mostrarEmLimpeza && emLimpeza.length > 0) {
     html += `<div style="font-size:13px;font-weight:700;color:#2e7d32;margin:16px 0 8px 0;text-transform:uppercase;letter-spacing:0.5px;">🧹 Em processo de limpeza (${emLimpeza.length})</div>`;
     html += emLimpeza.map(b => {
-      var diasStr = b.data ? (() => { var d = new Date(b.data.split('/').reverse().join('-')); var diff = Math.floor((new Date()-d)/86400000); return isNaN(diff)?'':diff+' dias'; })() : '';
+      var diasStr = b.data ? (() => { var d = parseDataBR(b.data); if (!d) return ''; var diff = Math.floor((new Date()-d)/86400000); return isNaN(diff)?'':diff+' dias'; })() : '';
       return `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border-radius:10px;margin-bottom:8px;border-left:4px solid #4CAF50;cursor:pointer;" onclick="irParaCurral('${b.id}')">
         <span style="font-size:20px;">🧹</span>
         <div style="flex:1;">
