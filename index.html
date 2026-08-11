@@ -4586,15 +4586,8 @@ executarAcao = function(acao, btn) {
 var chartProjSemanal = null;
 var DATAS_ENTRADA_MANUAL = {}; // { id_baia: 'YYYY-MM-DD' }
 
-function parseDataBR(str) {
-  if (!str) return null;
-  // Suporta DD/MM/YYYY HH:MM:SS ou DD/MM/YYYY ou YYYY-MM-DD
-  var s = str.trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s.split(' ')[0]);
-  var m = s.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-  if (m) return new Date(m[3] + '-' + m[2] + '-' + m[1]);
-  return null;
-}
+// (parseDataBR já definido mais acima — reaproveitada aqui, tratando data+hora sem bug de fuso UTC)
+
 
 function addDias(data, dias) {
   var d = new Date(data.getTime());
