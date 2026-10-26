@@ -239,6 +239,14 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color:
 }
 .btn-acao:hover { background: #0f3460; }
 .btn-acao:disabled { background: #ccc; cursor: not-allowed; }
+.btn-desfazer-popup {
+  margin-top: 6px; padding: 9px 16px; border-radius: 9px;
+  border: 1.5px solid #e53935; background: #fff; color: #e53935;
+  font-size: 13px; cursor: pointer; font-weight: 600; text-align: left;
+  transition: background 0.15s;
+}
+.btn-desfazer-popup:hover { background: #ffebee; }
+.btn-desfazer-popup:disabled { opacity: 0.5; cursor: not-allowed; }
 .msg { margin-top: 10px; padding: 9px 12px; border-radius: 8px; font-size: 13px; display: none; }
 .msg.ok { background: #e8f5e9; color: #2e7d32; display: block; }
 .msg.erro { background: #ffebee; color: #c62828; display: block; }
@@ -2744,6 +2752,12 @@ function abrirPopup(id) {
   var div = document.getElementById('pop-acoes'); div.innerHTML = '';
   if (acoes.length === 0) { div.innerHTML = '<p style="color:#aaa;font-size:13px">Nenhuma ação disponível</p>'; }
   else { acoes.forEach(a => { var btn = document.createElement('button'); btn.className = 'btn-acao'; btn.textContent = a.label; btn.onclick = () => executarAcao(a.acao, btn); div.appendChild(btn); }); }
+  // Desfazer: sempre disponível no popup, vale para a última ação lançada nesta baia
+  var btnDesf = document.createElement('button');
+  btnDesf.className = 'btn-desfazer-popup';
+  btnDesf.textContent = '↩ Desfazer última ação desta baia';
+  btnDesf.onclick = function() { desfazerAcaoPopup(btnDesf); };
+  div.appendChild(btnDesf);
   document.getElementById('pop-msg').className = 'msg';
 
   // Preencher nome do usuário logado automaticamente
@@ -2834,32 +2848,65 @@ function executarAcao(acao, btn) {
   .catch(() => { document.getElementById('pop-msg').textContent = '❌ Erro de conexão'; document.getElementById('pop-msg').className = 'msg erro'; btn.disabled = false; });
 }
 
-function desfazerAcao(idBaia, usuario) {
+// Aplica na tela o resultado de um desfazer bem-sucedido (usado pelo popup e pelo botão do header)
+function aplicarDesfeito(idBaia, dados, responsavelFallback) {
+  var stAnterior = dados.status_anterior;
+  var dataOriginal = dados.data_original || '';
+  var respOriginal = dados.responsavel_original || responsavelFallback;
+  if (!BD[idBaia]) BD[idBaia] = { id: idBaia, nome: idBaia, status: stAnterior, responsavel: respOriginal, data: dataOriginal };
+  BD[idBaia].status = stAnterior;
+  BD[idBaia].responsavel = respOriginal;
+  if (dataOriginal) BD[idBaia].data = dataOriginal;
+  renderMapa(); renderLegenda(); atualizarCards();
+  if (_ultimaAcaoGlobal && _ultimaAcaoGlobal.id_baia === idBaia) desativarBtnDesfazer();
+  // Recarrega status e ciclos (histórico do popup, gráficos e alertas dependem do ciclo revertido)
+  carregarDados().then(function() { renderMapa(); renderLegenda(); atualizarCards(); });
+  carregarGraficos();
+  return stAnterior;
+}
+
+// Botão "↩ Desfazer última ação desta baia" do popup
+function desfazerAcaoPopup(btn) {
+  var idBaia = baiaAtual;
   var msgDiv = document.getElementById('pop-msg');
-  msgDiv.innerHTML = '⏳ Desfazendo...';
+  var usuario = document.getElementById('pop-usuario').value.trim();
+  if (!usuario) {
+    msgDiv.textContent = 'Por favor informe seu nome!';
+    msgDiv.className = 'msg erro';
+    return;
+  }
+  var b = BD[idBaia] || {};
+  var stAtual = b.status || '';
+  var confirmado = confirm('↩ Desfazer a última ação da baia ' + (b.nome || idBaia) + '?\n\n' +
+    'Status atual: ' + (LABELS[stAtual] || stAtual || '—') + '\n' +
+    'Ela volta para o status anterior e o lançamento fica registrado como cancelado no histórico.');
+  if (!confirmado) return;
+  btn.disabled = true;
+  msgDiv.textContent = '⏳ Desfazendo...';
   msgDiv.className = 'msg';
   fetch(SCRIPT_URL, {
     method: 'POST',
     redirect: 'follow',
-    body: JSON.stringify({ acao: 'desfazer', id_baia: idBaia, responsavel: usuario, observacoes: 'Desfeito via painel' })
+    body: JSON.stringify({ acao: 'desfazer', id_baia: idBaia, responsavel: usuario, status_esperado: stAtual, observacoes: 'Desfeito via painel' })
   })
-  .then(r => r.json())
-  .then(data => {
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
     if (data.status === 'ok') {
-      var stAnterior = data.dados.status_anterior;
-      if (BD[idBaia]) { BD[idBaia].status = stAnterior; BD[idBaia].responsavel = usuario; }
-      var el = document.getElementById('b_' + idBaia);
-      if (el) { el.style.background = COR[stAnterior] || '#ccc'; el.title = idBaia + ': ' + (LABELS[stAnterior] || stAnterior); }
-      atualizarCards();
+      var stAnterior = aplicarDesfeito(idBaia, data.dados, usuario);
       msgDiv.textContent = '↩ Ação desfeita! Voltou para: ' + (LABELS[stAnterior] || stAnterior);
       msgDiv.className = 'msg ok';
-      setTimeout(() => fecharPopupDireto(), 2000);
+      setTimeout(function() { fecharPopupDireto(); }, 2000);
     } else {
       msgDiv.textContent = '⚠️ ' + (data.mensagem || 'Não foi possível desfazer');
       msgDiv.className = 'msg erro';
+      btn.disabled = false;
     }
   })
-  .catch(() => { msgDiv.textContent = '❌ Erro ao desfazer'; msgDiv.className = 'msg erro'; });
+  .catch(function() {
+    msgDiv.textContent = '❌ Erro de conexão ao desfazer';
+    msgDiv.className = 'msg erro';
+    btn.disabled = false;
+  });
 }
 
 // ── DESFAZER GLOBAL (botão fixo no header) ──
@@ -2893,24 +2940,17 @@ function desfazerUltimaAcaoGlobal() {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Desfazendo...'; }
   var idBaia = _ultimaAcaoGlobal.id_baia;
   var responsavel = _ultimaAcaoGlobal.responsavel;
+  var statusEsperado = _ultimaAcaoGlobal.status_novo;
   fetch(SCRIPT_URL, {
     method: 'POST', redirect: 'follow',
-    body: JSON.stringify({ acao: 'desfazer', id_baia: idBaia, responsavel: responsavel, observacoes: 'Desfeito via painel' })
+    body: JSON.stringify({ acao: 'desfazer', id_baia: idBaia, responsavel: responsavel, status_esperado: statusEsperado, observacoes: 'Desfeito via painel' })
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.status === 'ok') {
-      var stAnterior = data.dados.status_anterior;
-      var dataOriginal = data.dados.data_original || '';
-      var respOriginal = data.dados.responsavel_original || responsavel;
-      if (!BD[idBaia]) BD[idBaia] = { id: idBaia, nome: idBaia, status: stAnterior, responsavel: respOriginal, data: dataOriginal };
-      BD[idBaia].status = stAnterior;
-      BD[idBaia].responsavel = respOriginal;
-      if (dataOriginal) BD[idBaia].data = dataOriginal;
-      renderMapa(); renderLegenda(); atualizarCards();
+      var stAnterior = aplicarDesfeito(idBaia, data.dados, responsavel);
       desativarBtnDesfazer();
       mostrarToast('\u21a9 Desfeito! Baia ' + idBaia + ' voltou para ' + (LABELS[stAnterior] || stAnterior), 'ok');
-      carregarDados().then(function() { renderMapa(); renderLegenda(); atualizarCards(); });
     } else {
       mostrarToast('⚠️ ' + (data.mensagem || 'Não foi possível desfazer'), 'erro');
       desativarBtnDesfazer();
@@ -2949,6 +2989,7 @@ async function desfazerLote() {
   clearTimeout(_timerDesfazerLote);
   mostrarToast('↩ ' + ok + ' baia(s) desfeita(s) com sucesso!', 'ok');
   await carregarDados(); renderMapa();
+  carregarGraficos();
 }
 
 // ── AUTO REFRESH ──
