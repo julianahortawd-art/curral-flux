@@ -146,6 +146,8 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color:
 .card.manutencao .card-bar { background: var(--roxo-escuro); }
 .card.embarcadas .card-value { color: var(--laranja); }
 .card.embarcadas .card-bar { background: var(--laranja); }
+.card.ocuptemp .card-value { color: #607D8B; }
+.card.ocuptemp .card-bar { background: #607D8B; }
 
 /* MODAL BREAKDOWN */
 .modal-overlay {
@@ -596,6 +598,12 @@ window.addEventListener('load', function(){
       <div class="card-label">Embarcadas</div>
       <div class="card-bar"></div>
     </div>
+    <div class="card ocuptemp" onclick="abrirBreakdown('ocuptemp')">
+      <div class="card-icon">🔀</div>
+      <div class="card-value" id="c-ocuptemp">—</div>
+      <div class="card-label">Ocupação temporária</div>
+      <div class="card-bar"></div>
+    </div>
   </div>
 
   <!-- RESUMO POR GRUPO -->
@@ -912,6 +920,8 @@ window.addEventListener('load', function(){
       <button onclick="acaoEmLote('reparacao')"        style="padding:6px 12px;border-radius:8px;border:none;background:#7E57C2;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🔧 Manutenção Infra</button>
       <button onclick="acaoEmLote('liberada')"         style="padding:6px 12px;border-radius:8px;border:none;background:#4CAF50;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">✅ Liberar</button>
       <button onclick="acaoEmLote('entrada_animal')"   style="padding:6px 12px;border-radius:8px;border:none;background:#F44336;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🐂 Entrada animal</button>
+      <button onclick="acaoEmLote('ocupacao_temp_inicio')" style="padding:6px 12px;border-radius:8px;border:none;background:#607D8B;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🔀 Ocupação temporária</button>
+      <button onclick="acaoEmLote('ocupacao_temp_fim')"    style="padding:6px 12px;border-radius:8px;border:2px solid #607D8B;background:#fff;color:#607D8B;font-size:12px;font-weight:600;cursor:pointer;">✅ Encerrar ocup. temporária</button>
       <button id="btn-desfazer-lote" onclick="desfazerLote()" style="display:none;padding:6px 12px;border-radius:8px;border:2px solid #e53935;background:#fff;color:#e53935;font-size:12px;font-weight:700;cursor:pointer;margin-left:8px;">↩ Desfazer último lote</button>
     </div>
     <div style="display:flex;gap:8px;margin-left:auto;">
@@ -1472,21 +1482,24 @@ var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyzeSfZTlCCr6D4FZcdnY3
 var COR = {
   ocupada:'#F44336', embarcada:'#FF9800', 
   limpeza:'#2196F3', limpeza_finalizada:'#00ACC1', cascalho:'#795548',
-  reparacao:'#7E57C2', liberada:'#4CAF50'
+  reparacao:'#7E57C2', liberada:'#4CAF50',
+  ocupacao_temp:'#607D8B'
 };
 var LABELS = {
   ocupada:'Ocupada', embarcada:'Embarcada', 
   limpeza:'Limpeza e Transporte Organics - Iniciada', limpeza_finalizada:'Limpeza e Transporte Organics - Finalizado', cascalho:'Cascalho',
-  reparacao:'Manutenção Infra', liberada:'Liberada'
+  reparacao:'Manutenção Infra', liberada:'Liberada',
+  ocupacao_temp:'Ocupação Temporária'
 };
 var ACOES = {
   ocupada:    [{acao:'embarque',         label:'🚛 Embarcar'}],
   embarcada:  [{acao:'limpeza_iniciada', label:'🧹 Iniciar Limpeza'}],
   limpeza:    [{acao:'limpeza_finalizada',label:'✅ Finalizar Limpeza/Transporte'}],
-  limpeza_finalizada: [{acao:'cascalho',label:'⛏️ Cascalho'},{acao:'reparacao',label:'🔧 Manutenção Infra'},{acao:'liberada',label:'✅ Liberar Curral'}],
-  cascalho:   [{acao:'reparacao',label:'🔧 Manutenção Infra'},{acao:'liberada',label:'✅ Liberar Curral'}],
-  reparacao:  [{acao:'cascalho',label:'⛏️ Cascalho'},{acao:'liberada',label:'✅ Liberar Curral'}],
-  liberada:   [{acao:'entrada_animal',   label:'🐂 Entrada de Animal'}],
+  limpeza_finalizada: [{acao:'cascalho',label:'⛏️ Cascalho'},{acao:'reparacao',label:'🔧 Manutenção Infra'},{acao:'liberada',label:'✅ Liberar Curral'},{acao:'ocupacao_temp_inicio',label:'🔀 Ocupação temporária (movimentação)'}],
+  cascalho:   [{acao:'reparacao',label:'🔧 Manutenção Infra'},{acao:'liberada',label:'✅ Liberar Curral'},{acao:'ocupacao_temp_inicio',label:'🔀 Ocupação temporária (movimentação)'}],
+  reparacao:  [{acao:'cascalho',label:'⛏️ Cascalho'},{acao:'liberada',label:'✅ Liberar Curral'},{acao:'ocupacao_temp_inicio',label:'🔀 Ocupação temporária (movimentação)'}],
+  liberada:   [{acao:'entrada_animal',   label:'🐂 Entrada de Animal'},{acao:'ocupacao_temp_inicio',label:'🔀 Ocupação temporária (movimentação)'}],
+  ocupacao_temp: [{acao:'ocupacao_temp_fim', label:'✅ Encerrar ocupação temporária'}],
   aguardando: [{acao:'limpeza_iniciada', label:'🧹 Iniciar Limpeza'}],
 };
 var CONFS = [
@@ -1659,6 +1672,7 @@ function atualizarCards() {
   document.getElementById('c-cascalho').textContent     = contar('cascalho');
   document.getElementById('c-manutencao').textContent   = contar('reparacao');
   document.getElementById('c-embarcadas').textContent   = contar('embarcada');
+  document.getElementById('c-ocuptemp').textContent     = contar('ocupacao_temp');
 
   // Grupos: Engorda = Conf 1, 2, Remanga | Recria = Conf 3, Sequestro
   var ENGORDA  = ['Confinamento 1','Confinamento 2','Remanga'];
@@ -1931,6 +1945,7 @@ var BREAKDOWN_CONFIG = {
   cascalho:  { title: '🪨 Cascalho por Área',                filtro: b => b.status === 'cascalho',                              cor: '#795548' },
   manutencao:{ title: '🔧 Manutenção Infra por Área',        filtro: b => b.status === 'reparacao',                             cor: '#7E57C2' },
   embarcadas:{ title: '🚛 Embarcadas por Área',            filtro: b => b.status === 'embarcada',                              cor: '#FF9800' },
+  ocuptemp:  { title: '🔀 Ocupação Temporária por Área',     filtro: b => b.status === 'ocupacao_temp',                          cor: '#607D8B' },
 };
 
 function abrirBreakdown(tipo) {
@@ -1998,12 +2013,12 @@ function irParaMapaFiltrado(confinamento, cfg) {
     var statusParaFiltrar = null;
     var testBaias = Object.values(BD);
     // Testar quais status o filtro aceita
-    var statusAceitos = ['ocupada','embarcada','limpeza','limpeza_finalizada','cascalho','reparacao','liberada'].filter(st => {
+    var statusAceitos = ['ocupada','embarcada','limpeza','limpeza_finalizada','cascalho','reparacao','liberada','ocupacao_temp'].filter(st => {
       return cfg.filtro({ status: st, confinamento: confinamento });
     });
     if (statusAceitos.length === 1) {
       filtroStatus = statusAceitos[0];
-    } else if (statusAceitos.length > 1 && statusAceitos.length < 7) {
+    } else if (statusAceitos.length > 1 && statusAceitos.length < 8) {
       // múltiplos status (ex: limpeza) — destacar o primeiro
       filtroStatus = statusAceitos[0];
     } else {
@@ -2539,6 +2554,8 @@ var ACAO_STATUS_VALIDO = {
   reparacao:       ["limpeza_finalizada","cascalho"],
   liberada:        ["limpeza_finalizada","cascalho","reparacao"],
   entrada_animal:  ["liberada"],
+  ocupacao_temp_inicio: ["liberada","limpeza_finalizada","cascalho","reparacao"],
+  ocupacao_temp_fim:    ["ocupacao_temp"],
 };
 
 async function acaoEmLote(acao) {
@@ -2671,6 +2688,7 @@ var ICONES = {
   cascalho:   '<span style="font-size:28px;">🪨</span>',
   reparacao:  '<span style="font-size:28px;">🔧</span>',
   liberada:   '<span style="font-size:28px;">✅</span>',
+  ocupacao_temp: '<span style="font-size:28px;">🔀</span>',
 };
 
 function renderLegenda() {
@@ -4337,7 +4355,7 @@ function exportarBackupExcel() {
     []
   ];
   var LABELS = { ocupada:'Ocupada', embarcada:'Embarcada', limpeza:'Limpeza/Transp. Iniciada',
-                 limpeza_finalizada:'Limpeza/Transp. Finalizado', cascalho:'Cascalho', reparacao:'Manutenção Infra', liberada:'Liberada' };
+                 limpeza_finalizada:'Limpeza/Transp. Finalizado', cascalho:'Cascalho', reparacao:'Manutenção Infra', liberada:'Liberada', ocupacao_temp:'Ocupação Temporária' };
   Object.entries(porStatus).forEach(function(e) {
     resumoRows.push([LABELS[e[0]] || e[0], e[1]]);
   });
