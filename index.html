@@ -912,6 +912,11 @@ window.addEventListener('load', function(){
       <span id="selecao-count" style="font-size:18px;font-weight:800;color:#C08332;">0</span>
       <span style="font-size:13px;color:#3D2B1F;margin-left:4px;font-weight:600;">currais selecionados</span>
     </div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;color:#8C4D2E;font-weight:600;">
+      <span>🕒 Data/hora (vazio = agora):</span>
+      <input id="lote-data-acao" type="date" style="padding:4px 8px;border-radius:8px;border:1.5px solid #D4C4A8;font-size:12px;background:#fff;color:#3D2B1F;">
+      <input id="lote-hora-acao" type="time" style="padding:4px 8px;border-radius:8px;border:1.5px solid #D4C4A8;font-size:12px;background:#fff;color:#3D2B1F;">
+    </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button onclick="acaoEmLote('embarque')"        style="padding:6px 12px;border-radius:8px;border:none;background:#FF9800;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🚛 Embarcar</button>
       <button onclick="acaoEmLote('limpeza_iniciada')" style="padding:6px 12px;border-radius:8px;border:none;background:#2196F3;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🧹 Iniciar limpeza/transporte</button>
@@ -968,8 +973,12 @@ window.addEventListener('load', function(){
       <input id="pop-usuario" type="text" placeholder="Ex: Sheila, Hudson...">
     </div>
     <div class="popup-resp" style="margin-top:6px;">
-      <label style="font-size:12px;color:#888;">Data da ação: <span style="font-size:11px;font-style:italic;">(hoje por padrão)</span></label>
-      <input id="pop-data-acao" type="date" style="padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;background:var(--card);color:var(--text);width:100%;box-sizing:border-box;">
+      <label style="font-size:12px;color:#888;">Data e hora da ação: <span style="font-size:11px;font-style:italic;">(agora por padrão — altere para lançar retroativo)</span></label>
+      <div style="display:flex;gap:8px;">
+        <input id="pop-data-acao" type="date" oninput="marcarDataHoraManual()" style="flex:1.4;padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;background:var(--card);color:var(--text);min-width:0;box-sizing:border-box;">
+        <input id="pop-hora-acao" type="time" oninput="marcarDataHoraManual()" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;background:var(--card);color:var(--text);min-width:0;box-sizing:border-box;">
+      </div>
+      <div id="pop-aviso-retro" style="display:none;margin-top:6px;padding:6px 10px;border-radius:8px;background:#FFF3E0;color:#E65100;font-size:12px;font-weight:600;"></div>
     </div>
     <div class="popup-actions" id="pop-acoes"></div>
     <div class="msg" id="pop-msg"></div>
@@ -2561,6 +2570,13 @@ var ACAO_STATUS_VALIDO = {
 async function acaoEmLote(acao) {
   if (curraisSelecionadas.size === 0) { alert('Selecione pelo menos um curral!'); return; }
 
+  // Data/hora opcionais do lote (vazio = agora). Preenchidas = lançamento retroativo para todas.
+  var loteDataEl = document.getElementById('lote-data-acao'), loteHoraEl = document.getElementById('lote-hora-acao');
+  var loteData = loteDataEl ? loteDataEl.value : '', loteHora = loteHoraEl ? loteHoraEl.value : '';
+  if (loteData && !loteHora) { alert('Informe também a hora do lançamento (ou limpe a data para lançar agora).'); return; }
+  if (!loteData && loteHora) loteData = dataHoraAgoraLocal().data;
+  if (loteData && dataHoraAcaoFutura({ data: loteData, hora: loteHora })) { alert('⚠️ A data/hora do lote está no futuro. Corrija antes de lançar.'); return; }
+
   // Filtrar currais com status válido para a ação
   var statusValidos = ACAO_STATUS_VALIDO[acao] || [];
   var ids = Array.from(curraisSelecionadas);
@@ -2592,6 +2608,7 @@ Seu nome:`);
   var resultados = await Promise.allSettled(
     validas.map(id => {
       var payload = { acao, id_baia: id, responsavel, observacoes: 'Ação em lote' };
+      if (loteData) { payload.data_acao = loteData; payload.hora_acao = loteHora; }
       // Enviar configurações de projeção junto com entrada_animal
       if (acao === 'entrada_animal') {
         var ppEl = document.getElementById('proj-dias-permanencia');
@@ -2606,9 +2623,11 @@ Seu nome:`);
 
   var ok = resultados.filter(r => r.status === 'fulfilled' && (r.value.status === 'ok' || r.value.sucesso)).length;
   var erro = resultados.length - ok;
+  var primeiroErro = '';
+  resultados.forEach(r => { if (!primeiroErro && r.status === 'fulfilled' && r.value && r.value.status === 'erro') primeiroErro = r.value.mensagem || ''; });
   var idsOk = validas.filter((id, i) => resultados[i].status === 'fulfilled' && (resultados[i].value.status === 'ok' || resultados[i].value.sucesso));
 
-  alert(`✅ ${ok} curral${ok>1?'is':''} atualizado${ok>1?'s':''}${erro > 0 ? `\n⚠️ ${erro} com erro` : ''}${invalidas.length > 0 ? `\n⏭️ ${invalidas.length} ignorados (status incorreto)` : ''}`);
+  alert(`✅ ${ok} curral${ok>1?'is':''} atualizado${ok>1?'s':''}${erro > 0 ? `\n⚠️ ${erro} com erro${primeiroErro ? ' — ' + primeiroErro : ''}` : ''}${invalidas.length > 0 ? `\n⏭️ ${invalidas.length} ignorados (status incorreto)` : ''}`);
 
   // Guardar lote para desfazer
   if (idsOk.length > 0) {
@@ -2622,6 +2641,8 @@ Seu nome:`);
     }
   }
   // Limpar seleção e sair do modo
+  if (loteDataEl) loteDataEl.value = '';
+  if (loteHoraEl) loteHoraEl.value = '';
   curraisSelecionadas.clear();
   modoSelecao = false;
   var btn = document.getElementById('btn-selecao');
@@ -2755,6 +2776,52 @@ function renderLegenda() {
   });
 }
 
+// ── DATA/HORA DA AÇÃO (padrão: agora; editável para lançar retroativo) ──
+function pad2(n) { return String(n).padStart(2, '0'); }
+function dataHoraAgoraLocal() {
+  var d = new Date();
+  return { data: d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()),
+           hora: pad2(d.getHours()) + ':' + pad2(d.getMinutes()) };
+}
+function dataHoraParaDate(dh) {
+  var p = dh.data.split('-'), h = dh.hora.split(':');
+  return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10), parseInt(h[0], 10), parseInt(h[1], 10), 0);
+}
+// true se a data/hora está mais de 5 min no futuro (mesma tolerância do backend)
+function dataHoraAcaoFutura(dh) { return dataHoraParaDate(dh).getTime() > Date.now() + 5 * 60 * 1000; }
+
+function preencherDataHoraAcao() {
+  var agora = dataHoraAgoraLocal();
+  var dEl = document.getElementById('pop-data-acao'), hEl = document.getElementById('pop-hora-acao');
+  if (dEl) { dEl.value = agora.data; dEl.max = agora.data; dEl.dataset.manual = ''; }
+  if (hEl) { hEl.value = agora.hora; hEl.dataset.manual = ''; }
+  atualizarAvisoRetroativo();
+}
+function marcarDataHoraManual() {
+  var dEl = document.getElementById('pop-data-acao'), hEl = document.getElementById('pop-hora-acao');
+  if (dEl) dEl.dataset.manual = '1';
+  if (hEl) hEl.dataset.manual = '1';
+  atualizarAvisoRetroativo();
+}
+// Data/hora a lançar. Se a pessoa não mexeu nos campos, usa o "agora" do momento do clique
+// (o popup pode ter ficado aberto alguns minutos). Campo apagado cai no valor de agora.
+function lerDataHoraAcao() {
+  var dEl = document.getElementById('pop-data-acao'), hEl = document.getElementById('pop-hora-acao');
+  var agora = dataHoraAgoraLocal();
+  var manual = (dEl && dEl.dataset.manual === '1') || (hEl && hEl.dataset.manual === '1');
+  if (!manual) return agora;
+  return { data: (dEl && dEl.value) || agora.data, hora: (hEl && hEl.value) || agora.hora };
+}
+function atualizarAvisoRetroativo() {
+  var av = document.getElementById('pop-aviso-retro');
+  if (!av) return;
+  var dh = lerDataHoraAcao();
+  var retro = dataHoraParaDate(dh).getTime() < Date.now() - 2 * 60 * 1000;
+  var p = dh.data.split('-');
+  av.style.display = retro ? 'block' : 'none';
+  av.textContent = retro ? '⏪ Lançamento retroativo: ' + p[2] + '/' + p[1] + '/' + p[0] + ' às ' + dh.hora : '';
+}
+
 // ── POPUP BAIA ──
 function abrirPopup(id) {
   baiaAtual = id;
@@ -2789,15 +2856,8 @@ function abrirPopup(id) {
     campUsuario.style.cursor = 'default';
   }
 
-  // Preencher data da ação com hoje automaticamente
-  var campDataAcao = document.getElementById('pop-data-acao');
-  if (campDataAcao) {
-    var hoje = new Date();
-    var anoH = hoje.getFullYear();
-    var mesH = String(hoje.getMonth()+1).padStart(2,'0');
-    var diaH = String(hoje.getDate()).padStart(2,'0');
-    campDataAcao.value = anoH + '-' + mesH + '-' + diaH;
-  }
+  // Data e hora da ação: agora por padrão (editável para lançar retroativo)
+  preencherDataHoraAcao();
 
   // Histórico do ciclo atual
   var histDiv = document.getElementById('pop-historico');
@@ -4486,7 +4546,9 @@ function enviarAcaoOffline(dadosAcao) {
     return fetch(url, { method: 'POST', body: JSON.stringify(dadosAcao) })
       .then(r => r.json());
   } else {
-    // Salva na fila offline
+    // Salva na fila offline. Sem internet não há como confirmar a data "anterior à última ação",
+    // então vai com forcar_data para não ficar travada na fila ao sincronizar.
+    dadosAcao.forcar_data = true;
     return salvarNaFila(url, dadosAcao).then(id => {
       // Marca a baia visualmente como pendente
       marcarBaiaPendente(dadosAcao.id_baia, dadosAcao.acao);
@@ -4593,12 +4655,16 @@ executarAcao = function(acao, btn) {
     document.getElementById('pop-msg').className = 'msg erro';
     return;
   }
+  var dh = lerDataHoraAcao();
+  if (dataHoraAcaoFutura(dh)) {
+    document.getElementById('pop-msg').textContent = '⚠️ A data/hora da ação está no futuro. Corrija antes de lançar.';
+    document.getElementById('pop-msg').className = 'msg erro';
+    return;
+  }
   btn.disabled = true;
   document.getElementById('pop-msg').className = 'msg';
 
-  var dataAcaoEl = document.getElementById('pop-data-acao');
-  var dataAcaoVal = dataAcaoEl ? dataAcaoEl.value : '';
-  var dadosAcao = { acao, id_baia: baiaAtual, responsavel: usuario, observacoes: 'via painel', data_acao: dataAcaoVal };
+  var dadosAcao = { acao, id_baia: baiaAtual, responsavel: usuario, observacoes: 'via painel', data_acao: dh.data, hora_acao: dh.hora };
   // Enviar configurações de projeção junto com entrada_animal
   if (acao === 'entrada_animal') {
     var ppEl = document.getElementById('proj-dias-permanencia');
@@ -4607,37 +4673,48 @@ executarAcao = function(acao, btn) {
     dadosAcao.dias_limpeza_proj = parseInt((plEl ? plEl.value : null) || CONFIG.diasLimpezaProj || 5);
   }
 
-  enviarAcaoOffline(dadosAcao)
-    .then(data => {
-      if (data.status === 'offline') {
-        document.getElementById('pop-msg').textContent = '⏳ Sem internet — salvo para sincronizar';
-        document.getElementById('pop-msg').className = 'msg';
-        document.getElementById('pop-msg').style.color = '#FF9800';
-        setTimeout(() => fecharPopupDireto(), 1800);
-      } else if (data.status === 'ok' && !data.dados.ignorado) {
-        var novoSt = data.dados.status_novo;
-        var idBaiaSalvaP = baiaAtual;
-        var dataAcaoEl = document.getElementById('pop-data-acao');
-        var dataAcaoVal = dataAcaoEl ? dataAcaoEl.value : '';
-        if (BD[baiaAtual]) { BD[baiaAtual].status = novoSt; BD[baiaAtual].responsavel = usuario; }
-        var el = document.getElementById('b_' + baiaAtual);
-        if (el) { el.style.background = COR[novoSt] || '#ccc'; el.title = baiaAtual + ': ' + (LABELS[novoSt] || novoSt); }
-        atualizarCards();
-        document.getElementById('pop-msg').textContent = '✅ ' + (LABELS[novoSt] || novoSt) + ' registrado!';
-        document.getElementById('pop-msg').className = 'msg ok';
-        ativarBtnDesfazer(idBaiaSalvaP, usuario, acao, novoSt);
-        setTimeout(() => fecharPopupDireto(), 1500);
-      } else {
-        document.getElementById('pop-msg').textContent = '⚠️ ' + (data.mensagem || 'Já registrado recentemente');
+  function enviar(dados) {
+    enviarAcaoOffline(dados)
+      .then(data => {
+        if (data.status === 'offline') {
+          document.getElementById('pop-msg').textContent = '⏳ Sem internet — salvo para sincronizar';
+          document.getElementById('pop-msg').className = 'msg';
+          document.getElementById('pop-msg').style.color = '#FF9800';
+          setTimeout(() => fecharPopupDireto(), 1800);
+        } else if (data.status === 'ok' && !data.dados.ignorado) {
+          var novoSt = data.dados.status_novo;
+          var idBaiaSalvaP = baiaAtual;
+          if (BD[baiaAtual]) { BD[baiaAtual].status = novoSt; BD[baiaAtual].responsavel = usuario; }
+          var el = document.getElementById('b_' + baiaAtual);
+          if (el) { el.style.background = COR[novoSt] || '#ccc'; el.title = baiaAtual + ': ' + (LABELS[novoSt] || novoSt); }
+          atualizarCards();
+          document.getElementById('pop-msg').textContent = '✅ ' + (LABELS[novoSt] || novoSt) + ' registrado!';
+          document.getElementById('pop-msg').className = 'msg ok';
+          ativarBtnDesfazer(idBaiaSalvaP, usuario, acao, novoSt);
+          setTimeout(() => fecharPopupDireto(), 1500);
+        } else if (data.codigo === 'data_anterior_ultima_acao') {
+          // Retroativo anterior à última ação da baia: gera duração negativa — pede confirmação
+          if (confirm('⚠️ ' + data.mensagem + '\n\nIsso pode gerar dias negativos nos ciclos. Lançar mesmo assim?')) {
+            dados.forcar_data = true;
+            enviar(dados);
+          } else {
+            document.getElementById('pop-msg').textContent = 'Lançamento cancelado. Ajuste a data/hora e tente de novo.';
+            document.getElementById('pop-msg').className = 'msg erro';
+            btn.disabled = false;
+          }
+        } else {
+          document.getElementById('pop-msg').textContent = '⚠️ ' + (data.mensagem || 'Já registrado recentemente');
+          document.getElementById('pop-msg').className = 'msg erro';
+          btn.disabled = false;
+        }
+      })
+      .catch(() => {
+        document.getElementById('pop-msg').textContent = '❌ Erro de conexão';
         document.getElementById('pop-msg').className = 'msg erro';
         btn.disabled = false;
-      }
-    })
-    .catch(() => {
-      document.getElementById('pop-msg').textContent = '❌ Erro de conexão';
-      document.getElementById('pop-msg').className = 'msg erro';
-      btn.disabled = false;
-    });
+      });
+  }
+  enviar(dadosAcao);
 };
 
 // ── PROJEÇÃO DE CICLOS ──
